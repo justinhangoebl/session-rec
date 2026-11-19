@@ -72,7 +72,7 @@ class Precision:
         next_item: Array of correct next items
         '''
         i=0
-        for part, series in result.iteritems(): 
+        for part, series in result.items(): 
             result.sort_values( part, ascending=False, inplace=True )
             self.add( series, next_item[i] )
             i += 1
@@ -158,7 +158,7 @@ class Recall:
         next_item: Array of correct next items
         '''
         i=0
-        for part, series in result.iteritems(): 
+        for part, series in result.items(): 
             result.sort_values( part, ascending=False, inplace=True )
             self.add( series, next_item[i] )
             i += 1
@@ -304,7 +304,7 @@ class MAP:
         next_item: Array of correct next items
         '''
         i=0
-        for part, series in result.iteritems(): 
+        for part, series in result.items(): 
             result.sort_values( part, ascending=False, inplace=True )
             self.add( series, next_item[i] )
             i += 1
@@ -435,7 +435,7 @@ class NDCG:
         next_item: Array of correct next items
         '''
         i = 0
-        for part, series in result.iteritems():
+        for part, series in result.items():
             result.sort_values(part, ascending=False, inplace=True)
             self.add(series, next_item[i])
             i += 1
@@ -600,7 +600,7 @@ class NDCG_relevance:
         next_item: Array of correct next items
         '''
         i = 0
-        for part, series in result.iteritems():
+        for part, series in result.items():
             result.sort_values(part, ascending=False, inplace=True)
             self.add(series, next_item[i])
             i += 1

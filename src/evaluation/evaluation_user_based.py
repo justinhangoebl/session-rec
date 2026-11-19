@@ -279,7 +279,7 @@ def evaluate_sessions_hgru(pr, metrics, test_data, train_data, items=None, cut_o
 
     # get the other columns in the dataset
     columns = [user_key, session_key, item_key]
-    other_columns = test_data.columns.values[np.in1d(test_data.columns.values, columns, invert=True)].tolist()
+    other_columns = test_data.columns.values[np.isin(test_data.columns.values, columns, invert=True)].tolist()
     other_columns.remove('in_eval')
 
     # evalutation_point_count = 0
@@ -388,11 +388,11 @@ def evaluate_sessions_hgru(pr, metrics, test_data, train_data, items=None, cut_o
             preds.fillna(0, inplace=True)
 
             in_item_id[valid_mask] = out_item_idx # ndarray - set next item as current item (to continue predicting for it)
-            in_eval_mask = np.zeros(batch_size, dtype=np.bool) # ndarray
+            in_eval_mask = np.zeros(batch_size, dtype=np.bool_) # ndarray
             in_eval_mask[valid_mask] = test_data['in_eval'].values[session_start_valid + i + 1] # ndarray - check if the "target item" is in the test data (or train data)
 
             if np.any(in_eval_mask): # if (any of) the target item(s) is in the test data, evaluate the prediction
-                for part, series in preds.loc[:, in_eval_mask].iteritems():
+                for part, series in preds.loc[:, in_eval_mask].items():
                     preds.sort_values(part, ascending=False, inplace=True)
 
                     time_sum_clock += time.process_time() - crs

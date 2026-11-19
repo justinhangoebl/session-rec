@@ -69,7 +69,7 @@ def split_data_slice(data, slice_id, days_offset, days_shift):
     session_max_times = (data.groupby([SESSION_KEY])[TIME_KEY]).max()
     greater_start = session_max_times[session_max_times >= start.timestamp()].index
     lower_end = session_max_times[session_max_times <= end.timestamp()].index
-    data = data[np.in1d(data[SESSION_KEY], greater_start.intersection(lower_end))]
+    data = data[np.isin(data[SESSION_KEY], greater_start.intersection(lower_end))]
 
     # print('Slice data set {}\n\tEvents: {}\n\tSessions: {}\n\tItems: {}\n\tSpan: {} / {}'.
     #       format(slice_id, len(data_filtered), data_filtered[SESSION_KEY].nunique(), data_filtered[ITEM_KEY].nunique(),

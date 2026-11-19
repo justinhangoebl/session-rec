@@ -65,7 +65,7 @@ def load_data(path, file, rows_train=None, rows_test=None, slice_num=None, densi
             drop_n = round(len(sessions) - (len(sessions) * density))
             drop_sessions = np.random.choice(sessions, drop_n, replace=False)
             test = test[~test.SessionId.isin(drop_sessions)]
-            test = test[np.in1d(test.ItemId, train.ItemId)]
+            test = test[np.isin(test.ItemId, train.ItemId)]
             test.to_csv(path + file + test_appendix + split + '.txt.' + str(density), sep='\t', index=False)
 
         density_appendix = '.' + str(density)
@@ -84,10 +84,10 @@ def load_data(path, file, rows_train=None, rows_test=None, slice_num=None, densi
         test = pd.read_csv(path + file + test_appendix + split + '.txt' + density_appendix, sep='\t',
                            dtype={'ItemId': np.int64}, nrows=rows_test)
 
-    test = test[np.in1d(test.ItemId, train.ItemId)]
+    test = test[np.isin(test.ItemId, train.ItemId)]
 
     session_lengths = test.groupby('SessionId').size()
-    test = test[np.in1d(test.SessionId, session_lengths[session_lengths > 1].index)]
+    test = test[np.isin(test.SessionId, session_lengths[session_lengths > 1].index)]
 
     test.sort_values(['SessionId', 'ItemId'], inplace=True)
     train.sort_values(['SessionId', 'ItemId'], inplace=True)
@@ -120,15 +120,15 @@ def prepare_data_session(train, test, sessions_train=None, sessions_test=None):
 
     if (sessions_train != None):
         keep = train.sort_values('Time', ascending=False).SessionId.unique()[:(sessions_train - 1)]
-        train = train[np.in1d(train.SessionId, keep)]
-        test = test[np.in1d(test.ItemId, train.ItemId)]
+        train = train[np.isin(train.SessionId, keep)]
+        test = test[np.isin(test.ItemId, train.ItemId)]
 
     if (sessions_test != None):
         keep = test.SessionId.unique()[:(sessions_test - 1)]
-        test = test[np.in1d(test.SessionId, keep)]
+        test = test[np.isin(test.SessionId, keep)]
 
     session_lengths = test.groupby('SessionId').size()
-    test = test[np.in1d(test.SessionId, session_lengths[session_lengths > 1].index)]
+    test = test[np.isin(test.SessionId, session_lengths[session_lengths > 1].index)]
 
     # output
     data_start = datetime.fromtimestamp(train.Time.min(), timezone.utc)
@@ -357,23 +357,23 @@ def load_data_session_retrain(path, file, trian_set, test_num, sessions_train=No
 
     if (sessions_train != None):
         keep = train.sort_values('Time', ascending=False).SessionId.unique()[:(sessions_train - 1)]
-        train = train[np.in1d(train.SessionId, keep)]
+        train = train[np.isin(train.SessionId, keep)]
         for i in range(0, len(test_list)):
             test = test_list[i]
             test_list[i] = test[
-                np.in1d(test.ItemId, train.ItemId)]  # todo: check whether it's save each test set in a right way or not
+                np.isin(test.ItemId, train.ItemId)]  # todo: check whether it's save each test set in a right way or not
 
     if (sessions_test != None):
         for i in range(0, len(test_list)):
             test = test_list[i]
             keep = test.SessionId.unique()[:(sessions_test - 1)]
             test_list[i] = test[
-                np.in1d(test.SessionId, keep)]  # todo: check whether it's save each test set in a right way or not
+                np.isin(test.SessionId, keep)]  # todo: check whether it's save each test set in a right way or not
 
     for i in range(0, len(test_list)):
         test = test_list[i]
         session_lengths = test.groupby('SessionId').size()
-        test_list[i] = test[np.in1d(test.SessionId, session_lengths[
+        test_list[i] = test[np.isin(test.SessionId, session_lengths[
             session_lengths > 1].index)]  # todo: check whether it's save each test set in a right way or not
 
     # output
@@ -459,7 +459,7 @@ def load_data_userbased(path, file, rows_train=None, rows_test=None, slice_num=N
             drop_n = round(len(sessions) - (len(sessions) * density))
             drop_sessions = np.random.choice(sessions, drop_n, replace=False)
             test = test[~test.SessionId.isin(drop_sessions)]
-            test = test[np.in1d(test.ItemId, train.ItemId)]
+            test = test[np.isin(test.ItemId, train.ItemId)]
             test.to_csv(path + file + test_appendix + split + '.csv.' + str(density), sep='\t', index=False)
 
         density_appendix = '.' + str(density)
@@ -482,7 +482,7 @@ def load_data_userbased(path, file, rows_train=None, rows_test=None, slice_num=N
     test = rename_cols(test)
 
     if (rows_train != None):
-        test = test[np.in1d(test.ItemId, train.ItemId)]
+        test = test[np.isin(test.ItemId, train.ItemId)]
 
     # output
     data_start = datetime.fromtimestamp(train.Time.min(), timezone.utc)
@@ -628,7 +628,7 @@ def count_repetitions(path, file, rows_train=None, rows_test=None, slice_num=Non
             drop_n = round(len(sessions) - (len(sessions) * density))
             drop_sessions = np.random.choice(sessions, drop_n, replace=False)
             test = test[~test.SessionId.isin(drop_sessions)]
-            test = test[np.in1d(test.ItemId, train.ItemId)]
+            test = test[np.isin(test.ItemId, train.ItemId)]
             test.to_csv(path + file + test_appendix + split + '.txt.' + str(density), sep='\t', index=False)
 
         density_appendix = '.' + str(density)
@@ -647,10 +647,10 @@ def count_repetitions(path, file, rows_train=None, rows_test=None, slice_num=Non
         test = pd.read_csv(path + file + test_appendix + split + '.txt' + density_appendix, sep='\t',
                            dtype={'ItemId': np.int64}, nrows=rows_test)
 
-    test = test[np.in1d(test.ItemId, train.ItemId)]
+    test = test[np.isin(test.ItemId, train.ItemId)]
 
     session_lengths = test.groupby('SessionId').size()
-    test = test[np.in1d(test.SessionId, session_lengths[session_lengths > 1].index)]
+    test = test[np.isin(test.SessionId, session_lengths[session_lengths > 1].index)]
 
     test.sort_values('SessionId', inplace=True)
     train.sort_values('SessionId', inplace=True)

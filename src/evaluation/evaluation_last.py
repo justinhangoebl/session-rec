@@ -64,7 +64,7 @@ def evaluate_sessions(pr, metrics, test_data, train_data, items=None, session_ke
             prev_sid = sid
         else:
             if items is not None:
-                if np.in1d(iid, items): items_to_predict = items
+                if np.isin(iid, items): items_to_predict = items
                 else: items_to_predict = np.hstack(([iid], items))  
                     
             crs = time.process_time();
@@ -174,7 +174,7 @@ def evaluate_sessions2(pr, metrics, test_data, train_data, items=None, session_k
             sid = next_sid
         else:
             if items is not None:
-                if np.in1d(iid, items): items_to_predict = items
+                if np.isin(iid, items): items_to_predict = items
                 else: items_to_predict = np.hstack(([iid], items))  
             
             if prev_iid > 0 and prev_sid > 0 :

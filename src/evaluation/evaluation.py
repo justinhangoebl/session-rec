@@ -82,7 +82,7 @@ def evaluate_sessions_batch(pr, metrics, test_data, train_data, items=None, cut_
             
             if items is not None:
                 uniq_out = np.unique(np.array(out_idx, dtype=np.int32))
-                preds = pr.predict_next_batch(iters, in_idx, np.hstack([items, uniq_out[~np.in1d(uniq_out,items)]]), batch_size)
+                preds = pr.predict_next_batch(iters, in_idx, np.hstack([items, uniq_out[~np.isin(uniq_out,items)]]), batch_size)
             else:
                 preds = pr.predict_next_batch(iters, in_idx, None, batch_size)
                 
@@ -93,7 +93,7 @@ def evaluate_sessions_batch(pr, metrics, test_data, train_data, items=None, cut_
 #                 m.add_batch( preds.loc[:,valid_mask], out_idx )
             
             i=0
-            for part, series in preds.loc[:,valid_mask].iteritems(): 
+            for part, series in preds.loc[:,valid_mask].items(): 
                 preds.sort_values( part, ascending=False, inplace=True )
                 for m in metrics:
                     m.add( preds[part], out_idx[i] )
@@ -195,7 +195,7 @@ def evaluate_sessions_batch_org(pr, metrics, test_data, train_data, items=None, 
             
             if items is not None:
                 uniq_out = np.unique(np.array(out_idx, dtype=np.int32))
-                preds = pr.predict_next_batch(iters, in_idx, np.hstack([items, uniq_out[~np.in1d(uniq_out,items)]]), batch_size)
+                preds = pr.predict_next_batch(iters, in_idx, np.hstack([items, uniq_out[~np.isin(uniq_out,items)]]), batch_size)
             else:
                 preds = pr.predict_next_batch(iters, in_idx, None, batch_size)
                 
@@ -301,7 +301,7 @@ def evaluate_sessions(pr, metrics, test_data, train_data, items=None, cut_off=20
             pos = 0
         else:
             if items is not None:
-                if np.in1d(iid, items): items_to_predict = items
+                if np.isin(iid, items): items_to_predict = items
                 else: items_to_predict = np.hstack(([iid], items))  
                     
             crs = time.process_time();
@@ -407,7 +407,7 @@ def evaluate_sessions_org(pr, metrics, test_data, train_data, items=None, cut_of
             prev_sid = sid
         else:
             if items is not None:
-                if np.in1d(iid, items): items_to_predict = items
+                if np.isin(iid, items): items_to_predict = items
                 else: items_to_predict = np.hstack(([iid], items))      
             preds = pr.predict_next(sid, prev_iid, items_to_predict)
             

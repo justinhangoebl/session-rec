@@ -184,7 +184,7 @@ class VSKNN_STAN:
         
         # Create things in the format ..
         predictions = np.zeros(len(predict_for_item_ids))
-        mask = np.in1d( predict_for_item_ids, list(scores.keys()) )
+        mask = np.isin( predict_for_item_ids, list(scores.keys()) )
         
         items = predict_for_item_ids[mask]
         values = [scores[x] for x in items]

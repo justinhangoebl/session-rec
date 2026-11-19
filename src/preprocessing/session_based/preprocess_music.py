@@ -86,15 +86,15 @@ def filter_data( data, min_item_support=MIN_ITEM_SUPPORT, min_session_length=MIN
     
     #y?
     session_lengths = data.groupby('SessionId').size()
-    data = data[np.in1d(data.SessionId, session_lengths[ session_lengths>1 ].index)]
+    data = data[np.isin(data.SessionId, session_lengths[ session_lengths>1 ].index)]
     
     #filter item support
     item_supports = data.groupby('ItemId').size()
-    data = data[np.in1d(data.ItemId, item_supports[ item_supports>= min_item_support ].index)]
+    data = data[np.isin(data.ItemId, item_supports[ item_supports>= min_item_support ].index)]
     
     #filter session length
     session_lengths = data.groupby('SessionId').size()
-    data = data[np.in1d(data.SessionId, session_lengths[ session_lengths>= min_session_length ].index)]
+    data = data[np.isin(data.SessionId, session_lengths[ session_lengths>= min_session_length ].index)]
     
     #output
     data_start = datetime.fromtimestamp( data.Time.min(), timezone.utc )
@@ -113,11 +113,11 @@ def split_data_org( data, output_file ) :
     session_max_times = data.groupby('SessionId').Time.max()
     session_train = session_max_times[session_max_times < tmax-86400].index
     session_test = session_max_times[session_max_times >= tmax-86400].index
-    train = data[np.in1d(data.SessionId, session_train)]
-    test = data[np.in1d(data.SessionId, session_test)]
-    test = test[np.in1d(test.ItemId, train.ItemId)]
+    train = data[np.isin(data.SessionId, session_train)]
+    test = data[np.isin(data.SessionId, session_test)]
+    test = test[np.isin(test.ItemId, train.ItemId)]
     tslength = test.groupby('SessionId').size()
-    test = test[np.in1d(test.SessionId, tslength[tslength>=2].index)]
+    test = test[np.isin(test.SessionId, tslength[tslength>=2].index)]
     print('Full train set\n\tEvents: {}\n\tSessions: {}\n\tItems: {}'.format(len(train), train.SessionId.nunique(), train.ItemId.nunique()))
     train.to_csv(output_file + '_train_full.txt', sep='\t', index=False)
     print('Test set\n\tEvents: {}\n\tSessions: {}\n\tItems: {}'.format(len(test), test.SessionId.nunique(), test.ItemId.nunique()))
@@ -127,11 +127,11 @@ def split_data_org( data, output_file ) :
     session_max_times = train.groupby('SessionId').Time.max()
     session_train = session_max_times[session_max_times < tmax-86400].index
     session_valid = session_max_times[session_max_times >= tmax-86400].index
-    train_tr = train[np.in1d(train.SessionId, session_train)]
-    valid = train[np.in1d(train.SessionId, session_valid)]
-    valid = valid[np.in1d(valid.ItemId, train_tr.ItemId)]
+    train_tr = train[np.isin(train.SessionId, session_train)]
+    valid = train[np.isin(train.SessionId, session_valid)]
+    valid = valid[np.isin(valid.ItemId, train_tr.ItemId)]
     tslength = valid.groupby('SessionId').size()
-    valid = valid[np.in1d(valid.SessionId, tslength[tslength>=2].index)]
+    valid = valid[np.isin(valid.SessionId, tslength[tslength>=2].index)]
     print('Train set\n\tEvents: {}\n\tSessions: {}\n\tItems: {}'.format(len(train_tr), train_tr.SessionId.nunique(), train_tr.ItemId.nunique()))
     train_tr.to_csv( output_file + '_train_tr.txt', sep='\t', index=False)
     print('Validation set\n\tEvents: {}\n\tSessions: {}\n\tItems: {}'.format(len(valid), valid.SessionId.nunique(), valid.ItemId.nunique()))
@@ -147,11 +147,11 @@ def split_data( data, output_file, days_test ) :
     session_max_times = data.groupby('SessionId').Time.max()
     session_train = session_max_times[ session_max_times < test_from.timestamp() ].index
     session_test = session_max_times[ session_max_times >= test_from.timestamp() ].index
-    train = data[np.in1d(data.SessionId, session_train)]
-    test = data[np.in1d(data.SessionId, session_test)]
-    test = test[np.in1d(test.ItemId, train.ItemId)]
+    train = data[np.isin(data.SessionId, session_train)]
+    test = data[np.isin(data.SessionId, session_test)]
+    test = test[np.isin(test.ItemId, train.ItemId)]
     tslength = test.groupby('SessionId').size()
-    test = test[np.in1d(test.SessionId, tslength[tslength>=2].index)]
+    test = test[np.isin(test.SessionId, tslength[tslength>=2].index)]
     print('Full train set\n\tEvents: {}\n\tSessions: {}\n\tItems: {}'.format(len(train), train.SessionId.nunique(), train.ItemId.nunique()))
     train.to_csv(output_file + '_train_full.txt', sep='\t', index=False)
     print('Test set\n\tEvents: {}\n\tSessions: {}\n\tItems: {}'.format(len(test), test.SessionId.nunique(), test.ItemId.nunique()))
@@ -181,7 +181,7 @@ def split_data_slice( data, output_file, slice_id, days_offset, days_train, days
     session_max_times = data.groupby('SessionId').Time.max()
     greater_start = session_max_times[session_max_times >= start.timestamp()].index
     lower_end = session_max_times[session_max_times <= end.timestamp()].index
-    data_filtered = data[np.in1d(data.SessionId, greater_start.intersection( lower_end ))]
+    data_filtered = data[np.isin(data.SessionId, greater_start.intersection( lower_end ))]
     
     print('Slice data set {}\n\tEvents: {}\n\tSessions: {}\n\tItems: {}\n\tSpan: {} / {} / {}'.
           format( slice_id, len(data_filtered), data_filtered.SessionId.nunique(), data_filtered.ItemId.nunique(), start.date().isoformat(), middle.date().isoformat(), end.date().isoformat() ) )
@@ -191,18 +191,18 @@ def split_data_slice( data, output_file, slice_id, days_offset, days_train, days
     sessions_train = session_max_times[session_max_times < middle.timestamp()].index
     sessions_test = session_max_times[session_max_times >= middle.timestamp()].index
     
-    train = data[np.in1d(data.SessionId, sessions_train)]
+    train = data[np.isin(data.SessionId, sessions_train)]
     
     print('Train set {}\n\tEvents: {}\n\tSessions: {}\n\tItems: {}\n\tSpan: {} / {}'.
           format( slice_id, len(train), train.SessionId.nunique(), train.ItemId.nunique(), start.date().isoformat(), middle.date().isoformat() ) )
     
     train.to_csv(output_file + '_train_full.'+str(slice_id)+'.txt', sep='\t', index=False)
     
-    test = data[np.in1d(data.SessionId, sessions_test)]
-    test = test[np.in1d(test.ItemId, train.ItemId)]
+    test = data[np.isin(data.SessionId, sessions_test)]
+    test = test[np.isin(test.ItemId, train.ItemId)]
     
     tslength = test.groupby('SessionId').size()
-    test = test[np.in1d(test.SessionId, tslength[tslength>=2].index)]
+    test = test[np.isin(test.SessionId, tslength[tslength>=2].index)]
     
     print('Test set {}\n\tEvents: {}\n\tSessions: {}\n\tItems: {}\n\tSpan: {} / {} \n\n'.
           format( slice_id, len(test), test.SessionId.nunique(), test.ItemId.nunique(), middle.date().isoformat(), end.date().isoformat() ) )
@@ -231,9 +231,9 @@ def split_data_retrain_train(data, output_file, days_train, days_test, retrain_n
     session_max_times = data.groupby('SessionId').Time.max()
     session_train = session_max_times[(session_min_times >= train_from.timestamp()) & (session_max_times <= train_to.timestamp())].index
 
-    train = data[np.in1d(data.SessionId, session_train)]
+    train = data[np.isin(data.SessionId, session_train)]
     trlength = train.groupby('SessionId').size()
-    train = train[np.in1d(train.SessionId, trlength[trlength>=2].index)]
+    train = train[np.isin(train.SessionId, trlength[trlength>=2].index)]
     # print('Full train set\n\tEvents: {}\n\tSessions: {}\n\tItems: {}'.format(len(train), train.SessionId.nunique(),
     #                                                                          train.ItemId.nunique()))
 
@@ -248,11 +248,11 @@ def split_data_retrain_train(data, output_file, days_train, days_test, retrain_n
     session_max_times = train.groupby('SessionId').Time.max()
     session_train = session_max_times[session_max_times < valid_from.timestamp()].index
     session_valid = session_max_times[session_max_times >= valid_from.timestamp()].index
-    train_tr = train[np.in1d(train.SessionId, session_train)]
-    valid = train[np.in1d(train.SessionId, session_valid)]
-    valid = valid[np.in1d(valid.ItemId, train_tr.ItemId)]
+    train_tr = train[np.isin(train.SessionId, session_train)]
+    valid = train[np.isin(train.SessionId, session_valid)]
+    valid = valid[np.isin(valid.ItemId, train_tr.ItemId)]
     tslength = valid.groupby('SessionId').size()
-    valid = valid[np.in1d(valid.SessionId, tslength[tslength >= 2].index)]
+    valid = valid[np.isin(valid.SessionId, tslength[tslength >= 2].index)]
     print('Train set\n\tEvents: {}\n\tSessions: {}\n\tItems: {}'.format(len(train_tr), train_tr.SessionId.nunique(),
                                                                         train_tr.ItemId.nunique()))
     train_tr.to_csv(output_file + '_train_tr.' + str(retrain_num) + '.txt', sep='\t', index=False)
@@ -280,13 +280,13 @@ def split_data_retrain_test(data, train, output_file, days_train, days_test, ret
     # session_test = session_max_times[(session_max_times > train_to.timestamp()) & (session_max_times <= test_to.timestamp())].index
     session_test = session_max_times[(session_max_times > test_from.timestamp()) & (session_max_times <= test_to.timestamp())].index
 
-    # train = data[np.in1d(data.SessionId, session_train)]
+    # train = data[np.isin(data.SessionId, session_train)]
     trlength = train.groupby('SessionId').size()
-    train = train[np.in1d(train.SessionId, trlength[trlength>=2].index)]
-    test = data[np.in1d(data.SessionId, session_test)]
-    test = test[np.in1d(test.ItemId, train.ItemId)]
+    train = train[np.isin(train.SessionId, trlength[trlength>=2].index)]
+    test = data[np.isin(data.SessionId, session_test)]
+    test = test[np.isin(test.ItemId, train.ItemId)]
     tslength = test.groupby('SessionId').size()
-    test = test[np.in1d(test.SessionId, tslength[tslength >= 2].index)]
+    test = test[np.isin(test.SessionId, tslength[tslength >= 2].index)]
     # print('Full train set\n\tEvents: {}\n\tSessions: {}\n\tItems: {}'.format(len(train), train.SessionId.nunique(),
     #                                                                          train.ItemId.nunique()))
     # train.to_csv(output_file + '_train_full.' + str(retrain_num) + '.txt', sep='\t', index=False)

@@ -105,6 +105,6 @@ class ItemKNN:
         '''
         preds = np.zeros(len(predict_for_item_ids))
         sim_list = self.sims[input_item_id]
-        mask = np.in1d(predict_for_item_ids, sim_list.index)
+        mask = np.isin(predict_for_item_ids, sim_list.index)
         preds[mask] = sim_list[predict_for_item_ids[mask]]
         return pd.Series(data=preds, index=predict_for_item_ids)

@@ -73,10 +73,10 @@ class SessionPop:
         else:
             self.pers[input_item_id] = 1
         preds = np.zeros(len(predict_for_item_ids))
-        mask = np.in1d(predict_for_item_ids, self.pop_list.index)
+        mask = np.isin(predict_for_item_ids, self.pop_list.index)
         ser = pd.Series(self.pers)
         preds[mask] = self.pop_list[predict_for_item_ids[mask]] 
-        mask = np.in1d(predict_for_item_ids, ser.index)
+        mask = np.isin(predict_for_item_ids, ser.index)
         preds[mask] += ser[predict_for_item_ids[mask]]
         return pd.Series(data=preds, index=predict_for_item_ids)
     

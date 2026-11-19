@@ -59,8 +59,8 @@ def last_days_out_split(data, days_interval, training_ratio=TRAINING_RATIO):
     # prefilter the timespan
     session_max_times = (data.groupby([SESSION_KEY])[TIME_KEY]).max()
     split_start = session_max_times[session_max_times > split.timestamp()].index
-    test = data[np.in1d(data[SESSION_KEY], split_start)]
-    train = data[~np.in1d(data[SESSION_KEY], split_start)]
+    test = data[np.isin(data[SESSION_KEY], split_start)]
+    train = data[~np.isin(data[SESSION_KEY], split_start)]
 
     # data.sort_values(by=[TIME_KEY], ascending=True, inplace=True)
     # data_list = np.array_split(data, PART_NUM)

@@ -320,7 +320,7 @@ class HGRU4Rec:
         else:
             raise NotImplementedError('Unsupported type')
         # map item ids to the internal indices
-        mask = np.in1d(keys, self.itemidmap.index, assume_unique=True)
+        mask = np.isin(keys, self.itemidmap.index, assume_unique=True)
         idx = self.itemidmap[keys].dropna().values.astype(np.int)
         emb = E.get_value()
         emb[idx] = values[mask]

@@ -75,7 +75,7 @@ class RPop:
             self.max_pop = self.pop_list[input_item_id]
         
         preds = np.zeros(len(predict_for_item_ids))
-        mask = np.in1d(predict_for_item_ids, self.pop_list.index)
+        mask = np.isin(predict_for_item_ids, self.pop_list.index)
         preds[mask] = self.pop_list[predict_for_item_ids[mask]] / self.max_pop
         return pd.Series(data=preds, index=predict_for_item_ids)
         

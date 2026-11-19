@@ -19,11 +19,11 @@ def split_data( data, output_file, days_test ) :
     session_max_times = data.groupby('SessionId').Time.max()
     session_train = session_max_times[ session_max_times < test_from.timestamp() ].index
     session_test = session_max_times[ session_max_times >= test_from.timestamp() ].index
-    train = data[np.in1d(data.SessionId, session_train)]
-    test = data[np.in1d(data.SessionId, session_test)]
-    test = test[np.in1d(test.ItemId, train.ItemId)]
+    train = data[np.isin(data.SessionId, session_train)]
+    test = data[np.isin(data.SessionId, session_test)]
+    test = test[np.isin(test.ItemId, train.ItemId)]
     tslength = test.groupby('SessionId').size()
-    test = test[np.in1d(test.SessionId, tslength[tslength>=2].index)]
+    test = test[np.isin(test.SessionId, tslength[tslength>=2].index)]
     
     #output
     data_start = datetime.fromtimestamp( train.Time.min(), timezone.utc )

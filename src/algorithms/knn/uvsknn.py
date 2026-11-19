@@ -297,7 +297,7 @@ class UVMContextKNN:
 
         # Create things in the format ..
         predictions = np.zeros(len(predict_for_item_ids))
-        mask = np.in1d(predict_for_item_ids, list(scores.keys()))
+        mask = np.isin(predict_for_item_ids, list(scores.keys()))
 
         predict_for_items = predict_for_item_ids[mask]
         values = [scores[x] for x in predict_for_items]

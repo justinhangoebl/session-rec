@@ -35,7 +35,7 @@ class MFBase(object):
 		'''Must be called before using train, load or top_k_recommendations
 		'''
 		self.dataset = dataset
-		self.valset = self.dataset[ np.in1d( dataset.SessionId, dataset.SessionId.unique()[-1000:] ) ]
+		self.valset = self.dataset[ np.isin( dataset.SessionId, dataset.SessionId.unique()[-1000:] ) ]
 		self.n_items = dataset.ItemId.nunique()
 		self.n_users = dataset.SessionId.nunique()
 

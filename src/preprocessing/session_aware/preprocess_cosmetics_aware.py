@@ -222,7 +222,7 @@ def split_data_slice(data, output_file, slice_id, days_offset, days_shift, min_s
     # inters = list(greater_start.intersection(lower_end))
     # data = data[data[SESSION_KEY].isin(inters)]
 
-    data = data[np.in1d(data[SESSION_KEY], greater_start.intersection(lower_end))]
+    data = data[np.isin(data[SESSION_KEY], greater_start.intersection(lower_end))]
 
     print("filter data")
     data = filter_data(data)
