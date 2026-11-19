@@ -1,0 +1,2 @@
+Metrics;MAP@10: ;MAP@20: ;Precision@10: ;Precision@20: ;Recall@10: ;Recall@20: ;HitRate@10: ;HitRate@20: ;MRR@10: ;MRR@20: ;Saver@50: ;Coverage@20: ;Popularity@20: ;
+sr_BR-steps=12-weighting=quadratic-boost_own_sessions=3.1-reminders=True-remind_strategy=hybrid-remind_sessions_num=2-weight_base=5-weight_IRec=3;0.034838820007454946;0.023467161882065365;0.0790122209877857;0.05145944854055554;0.3126554489227852;0.3823200490968752;0.4763155236844763;0.5583274416725583;0.313560398741189;0.319339114507551;1;0.9696556426866689;0.14816997254048334;

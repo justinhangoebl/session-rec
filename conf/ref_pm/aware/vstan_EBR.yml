@@ -1,0 +1,35 @@
+type: single # single|window|opt
+key: baselines_and_models #added to the csv names
+evaluation: evaluation_user_based # evaluation_user_based
+data:
+  name: rsc15-users
+  folder: data/rsc15_users/prepared/
+  prefix: yoochoose-clicks-100k
+#  slices: 5 #only window
+#  skip: [0,3] #only window
+
+results:
+  folder: results/ref/pm/aware/vstan_EBR/
+
+metrics:
+- class: accuracy_multiple.MAP
+  length: [10,20]
+- class: accuracy_multiple.Precision
+  length: [10,20]
+- class: accuracy_multiple.Recall
+  length: [10,20]
+- class: accuracy.HitRate
+  length: [10,20]
+- class: accuracy.MRR
+  length: [10,20]
+- class: saver.Saver
+  length: [50]
+- class: coverage.Coverage
+  length: [20]
+- class: popularity.Popularity
+  length: [20]
+
+algorithms:
+- class: knn.uvstan.U_VSKNN_STAN
+  params: {k: 2000, sample_size: 10000 , similarity: 'cosine', lambda_spw: 0.905, lambda_snh: 80, lambda_inh: 1.81, lambda_ipw: 3.62, lambda_idf: 5, extend_session_length: 5, boost_own_sessions: 0.1, reminders: True, remind_strategy: 'hybrid', remind_sessions_num: 2, weight_base: 6, weight_IRec: 2, weight_SSim: 0}
+  key: vstan_EBR
