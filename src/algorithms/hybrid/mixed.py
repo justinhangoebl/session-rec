@@ -110,7 +110,7 @@ class MixedHybrid:
                         final = final.append(prediction[:self.recomLengths[i]])
                     else:
                         final = final.append(prediction)
-            for itemId, confidenceValue in final.iteritems():
+            for itemId, confidenceValue in final.items():
                 final.at[itemId] = confidenceValue+1;
 
         final.sort_values(ascending=False, inplace=True)
