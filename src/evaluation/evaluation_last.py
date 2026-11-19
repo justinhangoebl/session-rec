@@ -37,7 +37,7 @@ def evaluate_sessions(pr, metrics, test_data, train_data, items=None, session_ke
     count = 0
     print('START evaluation of ', actions, ' actions in ', sessions, ' sessions')
     
-    sc = time.clock()
+    sc = time.process_time()
     st = time.time()
     
     time_sum = 0
@@ -67,7 +67,7 @@ def evaluate_sessions(pr, metrics, test_data, train_data, items=None, session_ke
                 if np.in1d(iid, items): items_to_predict = items
                 else: items_to_predict = np.hstack(([iid], items))  
                     
-            crs = time.clock();
+            crs = time.process_time();
             trs = time.time();
             
             next_session = test_data[session_key].values[i+1] if i+1 < len( test_data ) else -1
@@ -89,7 +89,7 @@ def evaluate_sessions(pr, metrics, test_data, train_data, items=None, session_ke
     #             preds += 1e-8 * np.random.rand(len(preds)) #Breaking up ties
                 preds.sort_values( ascending=False, inplace=True )
                 
-                time_sum_clock += time.clock()-crs
+                time_sum_clock += time.process_time()-crs
                 time_sum += time.time()-trs
                 time_count += 1
                 
@@ -100,7 +100,7 @@ def evaluate_sessions(pr, metrics, test_data, train_data, items=None, session_ke
         
         count += 1
     
-    print( 'END evaluation in ', (time.clock()-sc), 'c / ', (time.time()-st), 's' )
+    print( 'END evaluation in ', (time.process_time()-sc), 'c / ', (time.time()-st), 's' )
     print( '    avg rt ', (time_sum/time_count), 's / ', (time_sum_clock/time_count), 'c' )
 
     res = []
@@ -145,7 +145,7 @@ def evaluate_sessions2(pr, metrics, test_data, train_data, items=None, session_k
     count = 0
     print('START evaluation of ', actions, ' actions in ', sessions, ' sessions')
     
-    sc = time.clock()
+    sc = time.process_time()
     st = time.time()
     
     time_sum = 0
@@ -181,7 +181,7 @@ def evaluate_sessions2(pr, metrics, test_data, train_data, items=None, session_k
                 
                 if prev_sid != sid: #only last
                     
-                    crs = time.clock();
+                    crs = time.process_time();
                     trs = time.time();
                     
                     preds = pr.predict_next(prev_sid, prev_iid, items_to_predict)
@@ -189,7 +189,7 @@ def evaluate_sessions2(pr, metrics, test_data, train_data, items=None, session_k
                     preds[np.isnan(preds)] = 0
                     preds.sort_values( ascending=False, inplace=True )  
                     
-                    time_sum_clock += time.clock()-crs
+                    time_sum_clock += time.process_time()-crs
                     time_sum += time.time()-trs
                     time_count += 1
                 
@@ -206,7 +206,7 @@ def evaluate_sessions2(pr, metrics, test_data, train_data, items=None, session_k
         
         count += 1
     
-    print( 'END evaluation in ', (time.clock()-sc), 'c / ', (time.time()-st), 's' )
+    print( 'END evaluation in ', (time.process_time()-sc), 'c / ', (time.time()-st), 's' )
     print( '    avg rt ', (time_sum/time_count), 's / ', (time_sum_clock/time_count), 'c' )
 
     res = []

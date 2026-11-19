@@ -111,7 +111,7 @@ class Nextitrec:
                 batch_size = model_para['batch_size']
                 while (batch_no + 1) * batch_size < train_set.shape[0]:
 
-                    start = time.clock()
+                    start = time.process_time()
 
                     item_batch = train_set[batch_no * batch_size: (batch_no + 1) * batch_size, :]
 
@@ -121,7 +121,7 @@ class Nextitrec:
                         feed_dict={
                             self.itemrec.itemseq_input: item_batch
                         })
-                    end = time.clock()
+                    end = time.process_time()
                     if numIters % self.eval_iter == 0:
                         print("-------------------------------------------------------train1")
                         print("LOSS: {}\tITER: {}\tBATCH_NO: {}\t STEP:{}\t total_batches:{}".format(

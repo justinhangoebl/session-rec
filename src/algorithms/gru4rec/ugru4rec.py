@@ -576,7 +576,7 @@ class UGRU4Rec:
         base_order = np.argsort(data.groupby(self.session_key)[self.time_key].min().values) if self.time_sort else np.arange(len(offset_sessions)-1)
         data_items = data.ItemIdx.values
         for epoch in range(self.n_epochs):
-            sc = time.clock();
+            sc = time.process_time();
             st = time.time();
             for i in range(len(self.layers)):
                 self.H[i].set_value(np.zeros((self.batch_size,self.layers[i]), dtype=theano.config.floatX), borrow=True)
@@ -648,7 +648,7 @@ class UGRU4Rec:
                 print('Epoch {}: NaN error!'.format(str(epoch)))
                 self.error_during_train = True
                 return
-            print('Epoch{}\tloss: {:.6f}'.format(epoch, avgc), 'time: ', (time.clock() - sc), 'c / ', (time.time() - st), 's')
+            print('Epoch{}\tloss: {:.6f}'.format(epoch, avgc), 'time: ', (time.process_time() - sc), 'c / ', (time.time() - st), 's')
 
 
         # get the position of the columns

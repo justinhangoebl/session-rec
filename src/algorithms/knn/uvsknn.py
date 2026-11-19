@@ -399,12 +399,12 @@ class UVMContextKNN:
         --------
         out : float value
         '''
-        sc = time.clock()
+        sc = time.process_time()
         intersection = len(first & second)
         union = len(first | second)
         res = intersection / union
 
-        self.sim_time += (time.clock() - sc)
+        self.sim_time += (time.process_time() - sc)
 
         return res
 
