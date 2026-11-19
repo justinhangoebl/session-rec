@@ -1,0 +1,39 @@
+[project]
+name = "session-rec"
+version = "0.1.0"
+description = "Session-based and session-aware recommendation evaluation framework (uv port of rn5l/session-rec)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy",
+    "pandas",
+    "scipy",
+    "scikit-learn",
+    "pyyaml",
+    "pympler",
+    "dill",
+    "psutil",
+    "scikit-optimize",
+    "networkx",
+    "numexpr",
+]
+
+[project.optional-dependencies]
+hdf = ["tables"]  # only for data.type: hdf configs
+telegram = ["python-telegram-bot"]
+torch = ["torch"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# The YAML configs load classes by dotted path (algorithms.knn.vsknn.VMContextKNN ...),
+# so the three top-level packages keep their original names.
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["run_config", "run_preprocessing"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["algorithms*", "evaluation*", "preprocessing*"]
+namespaces = true
