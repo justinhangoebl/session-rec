@@ -48,7 +48,7 @@ class RPop:
         self.pop_list = data[ data[self.time_key] >= stamp ].groupby( self.item_key ).size()
         self.max_pop = self.pop_list.max();
     
-    def predict_next(self, session_id, input_item_id, predict_for_item_ids):
+    def predict_next(self, session_id, input_item_id, predict_for_item_ids, timestamp=0):
         '''
         Gives predicton scores for a selected set of items on how likely they be the next item in the session.
                 

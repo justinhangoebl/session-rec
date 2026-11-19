@@ -46,7 +46,7 @@ class Pop:
             self.pop_list.sort_values(ascending=False, inplace=True)
             self.pop_list = self.pop_list.head( self.top_n )  
     
-    def predict_next(self, session_id, input_item_id, predict_for_item_ids, input_user_id=None):
+    def predict_next(self, session_id, input_item_id, predict_for_item_ids, input_user_id=None, timestamp=0):
         '''
         Gives predicton scores for a selected set of items on how likely they be the next item in the session.
                 
