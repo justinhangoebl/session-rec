@@ -913,11 +913,16 @@ def status(bot, update):
             'Running on {}'.format(socket.gethostname()))
 
 
-if __name__ == '__main__':
-
+def cli():
+    '''Entry point: session-rec <config.yml | config_folder> [out_folder]'''
     if len(sys.argv) > 1:
         main(sys.argv[1], out=sys.argv[2] if len(sys.argv) > 2 else None)
     else:
         print('File or folder expected.')
+        sys.exit(2)
+
+
+if __name__ == '__main__':
+    cli()
 
 

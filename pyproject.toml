@@ -23,6 +23,10 @@ hdf = ["tables"]  # only for data.type: hdf configs
 telegram = ["python-telegram-bot"]
 torch = ["torch"]
 
+[project.scripts]
+session-rec = "run_config:cli"
+session-rec-preprocess = "run_preprocessing:cli"
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"

@@ -107,13 +107,14 @@ def ensure_dir(file_path):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-if __name__ == '__main__':
-    '''
-    Run the preprocessing configured above.
-    '''
-    
-    if len( sys.argv ) == 2: 
-        main( sys.argv[1] ) # for example: conf/preprocess/window/rsc15.yml
+def cli():
+    '''Entry point: session-rec-preprocess <preprocess_config.yml>'''
+    if len(sys.argv) == 2:
+        main(sys.argv[1])  # for example: conf/preprocess/window/rsc15.yml
     else:
-        print( 'Preprocessing configuration expected.' )
-    
+        print('Preprocessing configuration expected.')
+        sys.exit(2)
+
+
+if __name__ == '__main__':
+    cli()
