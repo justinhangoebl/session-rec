@@ -1,3 +1,5 @@
+import pandas as pd
+
 class MixedHybrid:
     '''
       MixedHybrid(algorithms, lengths)
@@ -99,7 +101,7 @@ class MixedHybrid:
                     for idx, pre in list(enumerate(final)):
                         if final.index[idx] in prediction.index:
                             prediction = prediction.drop(final.index[idx]) #pre2.drop(final.index[idx], inplace=True)
-                    final = final.append(prediction)
+                    final = pd.concat([final, prediction])
                     break
                 else:
                     # all algorithms except first & last ones
@@ -107,9 +109,9 @@ class MixedHybrid:
                         if final.index[idx] in prediction.index:
                             prediction = prediction.drop(final.index[idx])
                     if len(prediction) >= self.recomLengths[i]: #handling the case which prediction list is less than defined recommendation list
-                        final = final.append(prediction[:self.recomLengths[i]])
+                        final = pd.concat([final, prediction[:self.recomLengths[i]]])
                     else:
-                        final = final.append(prediction)
+                        final = pd.concat([final, prediction])
             for itemId, confidenceValue in final.items():
                 final.at[itemId] = confidenceValue+1;
 

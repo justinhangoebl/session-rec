@@ -68,7 +68,7 @@ class RPop:
         
         '''
         if not input_item_id in self.pop_list.index:
-            self.pop_list.set_value( input_item_id, 0 )
+            self.pop_list[input_item_id] = 0
         
         self.pop_list[input_item_id] += 1
         if self.pop_list[input_item_id] > self.max_pop :

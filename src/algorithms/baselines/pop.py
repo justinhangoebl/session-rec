@@ -70,3 +70,7 @@ class Pop:
         preds[mask] = self.pop_list[predict_for_item_ids[mask]]
         return pd.Series(data=preds, index=predict_for_item_ids)
         
+
+    def clear(self):
+        '''Nothing to release (kept for the runner API: run_config calls algorithm.clear()).'''
+        pass
