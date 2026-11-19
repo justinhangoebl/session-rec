@@ -38,7 +38,7 @@ class ItemKNN:
         self.session_key = session_key
         self.time_key = time_key
 
-    def fit(self, data):
+    def fit(self, data, test=None):
         '''
         Trains the predictor.
 
