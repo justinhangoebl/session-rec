@@ -16,9 +16,6 @@ import evaluation.loader as dl
 from builtins import Exception
 import pickle
 import dill
-from telegram.ext.updater import Updater
-from telegram.ext.commandhandler import CommandHandler
-import telegram
 import random
 import gc
 
@@ -28,10 +25,14 @@ BOT_TOKEN = 'API_TOKEN'
 
 NOTIFY = False
 TELEGRAM_STATUS = False
+# telegram is an optional extra (uv sync --extra telegram); only imported when enabled
 if TELEGRAM_STATUS:
+    from telegram.ext.updater import Updater
+    from telegram.ext.commandhandler import CommandHandler
     updater = Updater(BOT_TOKEN)  # , use_context=True
     updater.start_polling()
 if NOTIFY:
+    import telegram
     bot = telegram.Bot(token=BOT_TOKEN)
 
 
