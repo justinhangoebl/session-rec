@@ -1,0 +1,22 @@
+diff --git a/algorithms/IIRNN/ii_rnn.py b/algorithms/IIRNN/ii_rnn.py
+index cf23df2..fdd0b89 100644
+--- a/algorithms/IIRNN/ii_rnn.py
++++ b/algorithms/IIRNN/ii_rnn.py
+@@ -325,7 +325,7 @@ class IIRNN:
+             # in the leave-one-out setting: seems that we do not need the following lines, as we are in the test phase
+             if self.user_sess_representation is not None:
+                 # update the representation for the previous user
+-                self.datahandler.store_user_session_representations([self.session_representation], [self.user_sess_representation])
++                self.datahandler.store_user_session_representations([self.session_representation[0]], [self.user_sess_representation])
+             # update the current user id
+             self.user_sess_representation = user_id
+             # self.datahandler.store_user_session_representations([sess_rep], [user_id])
+@@ -395,7 +395,7 @@ class IIRNN:
+         score_list = []
+         k = self.TOP_K
+         for pred in predictions:
+-            pred_list.append(self.datahandler.get_item_map_reverse(pred))
++            pred_list.append(int(self.datahandler.get_item_map_reverse(pred)))
+             score = k
+             score_list.append(score)
+             k = k - 1

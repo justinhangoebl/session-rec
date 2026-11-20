@@ -15,6 +15,9 @@ The data handler (utils_ii_rnn.py) is a verbatim copy of the original. Reproduce
 Prediction-time difference (see squeeze_session_rep): the original stores the (1, d) representation of a finished
 test session in a deque of (d,) vectors; feeding that ragged deque to TensorFlow fails on the user's next session.
 With squeeze_session_rep=True (default) the (1, d) row is stored as (d,), which is what the code intends.
+The original also crashes in evaluation (iterrows() turns item ids into floats, so the prediction Series gets a
+float index and pandas 1.x slices it by label). The reference was produced with both fixes applied to the original
+(reference/aware2/orig_iirnn_fixes.patch); this port uses int item ids and the squeeze as well.
 Extra parameters: seed (numpy, torch), device, squeeze_session_rep.
 """
 import time
@@ -147,7 +150,7 @@ class IIRNN:
         self.session_representation = (H if self.use_last_hidden_state else X_avg).cpu().numpy()
         last = logits.reshape(1, -1, self.N_ITEMS)[0, len(self.session_items) - 1]
         top = torch.topk(last, k=self.TOP_K).indices.cpu().numpy()
-        pred_list = [self.datahandler.get_item_map_reverse(p) for p in top]
+        pred_list = [int(self.datahandler.get_item_map_reverse(p)) for p in top]   # int ids, as in the fixed original
         return pd.Series(np.arange(self.TOP_K, 0, -1), index=pred_list)
 
     def clear(self):
