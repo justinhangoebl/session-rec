@@ -1,0 +1,35 @@
+type: single # single|window, maybe add opt
+key: baselines_and_models_and_hybrids #added to the csv names
+evaluation: evaluation #evaluation|evaluation_last|evaluation_multiple|evaluation_user_based|evaluation_user_based_multiple
+data:
+  name: rsc15-100k #added in the end of the csv names
+  folder: data/rsc15/prepared/
+  prefix: yoochoose-clicks-100k
+#  slices: 5 #only window
+#  skip: [0,3] #only window
+  opts: {}
+
+results:
+  folder: results/matched/torch/seed2/
+
+metrics:
+- class: accuracy.HitRate
+  length: [3,5,10,15,20]
+- class: accuracy.MRR
+  length: [3,5,10,15,20]
+- class: accuracy_multiple.NDCG
+  length: [3,5,10,15,20]
+- class: coverage.Coverage
+  length: [20]
+- class: popularity.Popularity
+  length: [20]
+- class: saver.Saver
+  length: [50]
+- class: time_memory_usage.Time_usage_training
+- class: time_memory_usage.Time_usage_testing
+#- class: time_memory_usage.Memory_usage
+
+algorithms:
+- class: gru4rec_torch.adapter.GRU4RecTorch
+  params: { loss: 'cross-entropy', constrained_embedding: True, embedding: 0, elu_param: 0, layers: [100], n_epochs: 10, batch_size: 32, dropout_p_embed: 0.0, dropout_p_hidden: 0.4, learning_rate: 0.2, momentum: 0.2, n_sample: 2048, sample_alpha: 0.5, bpreg: 0.0, logq: 0.0, seed: 2, device: 'cuda:0' }
+  key: gru4rec_torch_matched

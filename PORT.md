@@ -24,8 +24,20 @@ Pop, SessionPop, RPop, ItemKNN crashed in the original runner (`fit(data)` witho
 `timestamp`, missing `clear()`; RPop used the removed `Series.set_value`). The same fixes were applied to a temporary
 copy of the original to obtain a reference (`reference/pm/orig_legacy_signature_fixes.patch`).
 
+## Neural: GRU4Rec (PyTorch, official implementation) -- ported, parity NOT met
+`src/algorithms/gru4rec_torch/`: the official hidasib/GRU4Rec_PyTorch_Official file (two documented local changes, see
+`NOTICE.md`, license terms there) plus `adapter.py` (per-event `predict_next` with per-session hidden state).
+* The adapter is faithful: on the same trained model its `predict_next` gives exactly the same HR/MRR as the official
+  `batch_eval` (`reference/neural_gru4rec_torch/adapter_check.py`).
+* Matched comparison (same cross-entropy params in both, 3 seeds, rsc15-100k): old Theano HR@20 0.661 +-0.001,
+  MRR@20 0.341 +-0.001; PyTorch HR@20 0.672 +-0.003, MRR@20 0.347 +-0.002. The gap (+0.011 / +0.006) is larger than the
+  seed spread, so the plan's "within seed noise" criterion is **not met**. Cause not yet identified; it is a difference
+  between the official PyTorch implementation and the older Theano code, not the adapter.
+* With the authors' best rsc15 parameters (logq=1): HR@20 0.677, MRR@20 0.355 (vs the old top1-max reference 0.628 / 0.331).
+  Not a like-for-like comparison: the PyTorch version has no top1-max loss.
+
 ## Not ported yet
-* Neural models (GRU4Rec, NARM, STAMP, SR-GNN, UGRU4Rec, UNARM): Theano/TF/Keras; references exist (`reference/neural`,
+* Neural models NARM, STAMP, SR-GNN, UGRU4Rec, UNARM: Theano/TF/Keras; references exist (`reference/neural`,
   `reference/aware/neural`), PyTorch replacements still to write (plan step 4).
 * Preprocessing (`src/preprocessing`, `run_preprocessing.py`): imports fine, never run (no raw datasets in the repo).
 * HGRU4Rec, IIRNN, SHAN, NSAR, NCFS, CSRM, NextItNet, AE, APGNN, SMF.
