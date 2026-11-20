@@ -3,6 +3,8 @@ import pandas as pd
 from datetime import datetime, timezone, timedelta
 import dateutil.parser
 import subprocess
+import csv
+import sys
 
 # data config (all methods)
 
@@ -65,12 +67,30 @@ def make_sessions(data, session_th=SESSION_THRESHOLD, is_ordered=False, user_key
     data[session_key] = session_ids
     return data
 
-def load_data(file):
-    data = pd.read_csv(file + '.tsv', sep='\t',
-                       names=[USER_KEY, TIME_KEY, "artist_id", "artist", ITEM_KEY, "track"])  # Items are tracks
-    # data = pd.read_csv(file + '.tsv', sep='\t', names=[USER_KEY, TIME_KEY, ITEM_KEY, "artist", "track_id", "track"])  # Items are artists
+def read_raw(file, raw_quoting='legacy'):
+    """Read the raw LASTFM 1K tsv.
 
-    # just keep columns USER_KEY, TIME_KEY and ITEM_KEY
+    raw_quoting='legacy' (default) reproduces the original (pandas 1.x read_csv with default quoting): a field that
+    starts with '"' is read as quoted and swallows the following lines, so 52,006 of the 19,150,868 plays are lost or
+    merged. pandas 3 raises on such input instead, so the legacy parse uses Python's lenient csv module, which gives
+    row-for-row the same result as pandas 1.2.4 (checked on the full file).
+    raw_quoting='none' parses every line as written (csv.QUOTE_NONE): the correct reading of the file.
+    """
+    names = [USER_KEY, TIME_KEY, "artist_id", "artist", ITEM_KEY, "track"]
+    if raw_quoting == 'none':
+        return pd.read_csv(file + '.tsv', sep='\t', names=names, quoting=csv.QUOTE_NONE)
+    assert raw_quoting == 'legacy', raw_quoting
+    csv.field_size_limit(sys.maxsize)
+    rows = []
+    with open(file + '.tsv', newline='', encoding='utf-8') as fh:
+        for r in csv.reader(fh, delimiter='\t'):
+            r = (r + [''] * 6)[:6]
+            rows.append([x if x != '' else np.nan for x in r])
+    return pd.DataFrame(rows, columns=names)
+
+
+def load_data(file, raw_quoting='legacy'):
+    data = read_raw(file, raw_quoting)
     data = data[[USER_KEY, TIME_KEY, ITEM_KEY]]
 
     # remove rows with NA userId

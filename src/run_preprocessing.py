@@ -63,6 +63,8 @@ def run_file( conf ):
     #load data from raw and transform
     if 'sample_percentage' in conf['data']:
         data = preprocessor.load_data(conf['data']['folder'] + conf['data']['prefix'], sample_percentage=conf['data']['sample_percentage'])
+    elif 'raw_quoting' in conf['data']:   # LASTFM: 'legacy' (original parse, default) or 'none' (every line as written)
+        data = preprocessor.load_data( conf['data']['folder'] + conf['data']['prefix'], raw_quoting=conf['data']['raw_quoting'] )
     else:
         data = preprocessor.load_data( conf['data']['folder'] + conf['data']['prefix'] )
     if type(data) == tuple:
