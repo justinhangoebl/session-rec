@@ -1,0 +1,35 @@
+type: single # single|window|opt
+key: baselines_and_models #added to the csv names
+evaluation: evaluation_user_based # evaluation_user_based
+data:
+  name: rsc15-users
+  folder: data/rsc15_users/prepared/
+  prefix: yoochoose-clicks-100k
+#  slices: 5 #only window
+#  skip: [0,3] #only window
+
+results:
+  folder: results/port/aware-neural/shan/seed1/
+
+metrics:
+- class: accuracy_multiple.MAP
+  length: [10,20]
+- class: accuracy_multiple.Precision
+  length: [10,20]
+- class: accuracy_multiple.Recall
+  length: [10,20]
+- class: accuracy.HitRate
+  length: [10,20]
+- class: accuracy.MRR
+  length: [10,20]
+- class: saver.Saver
+  length: [50]
+- class: coverage.Coverage
+  length: [20]
+- class: popularity.Popularity
+  length: [20]
+
+algorithms:
+- class: shan_torch.shan.SHAN
+  params: { iter: 100, global_dimension: 100, lambda_uv: 0.01, lambda_a: 1, seed: 1, device: 'cpu' }
+  key: shan

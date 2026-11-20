@@ -1,0 +1,2 @@
+Metrics;MAP@10: ;MAP@20: ;Precision@10: ;Precision@20: ;Recall@10: ;Recall@20: ;HitRate@10: ;HitRate@20: ;MRR@10: ;MRR@20: ;Saver@50: ;Coverage@20: ;Popularity@20: ;
+hgru4rec-final_act=linear-dropout_p_hidden_usr=0.4-dropout_p_hidden_ses=0.3-dropout_p_init=0.4-momentum=0.3-learning_rate=0.06-user_propagation_mode=all-batch_size=5;0.04332529433875627;0.027752372595026706;0.0963438036562037;0.05914554085446032;0.36577202127682046;0.4224220002075782;0.5503484496515504;0.611958388041612;0.32573906275300135;0.3300434933205863;1;0.9713603818615751;0.06915222092820861;
