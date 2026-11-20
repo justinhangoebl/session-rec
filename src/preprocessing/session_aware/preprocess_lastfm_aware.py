@@ -67,14 +67,15 @@ def make_sessions(data, session_th=SESSION_THRESHOLD, is_ordered=False, user_key
     data[session_key] = session_ids
     return data
 
-def read_raw(file, raw_quoting='legacy'):
+def read_raw(file, raw_quoting='none'):
     """Read the raw LASTFM 1K tsv.
 
-    raw_quoting='legacy' (default) reproduces the original (pandas 1.x read_csv with default quoting): a field that
+    raw_quoting='none' (default) parses every line as written (csv.QUOTE_NONE): the correct reading of the file.
+    raw_quoting='legacy' reproduces the original (pandas 1.x read_csv with default quoting): a field that
     starts with '"' is read as quoted and swallows the following lines, so 52,006 of the 19,150,868 plays are lost or
     merged. pandas 3 raises on such input instead, so the legacy parse uses Python's lenient csv module, which gives
-    row-for-row the same result as pandas 1.2.4 (checked on the full file).
-    raw_quoting='none' parses every line as written (csv.QUOTE_NONE): the correct reading of the file.
+    row-for-row the same result as pandas 1.2.4 (checked on the full file). Use it only to compare with results
+    produced by the original code.
     """
     names = [USER_KEY, TIME_KEY, "artist_id", "artist", ITEM_KEY, "track"]
     if raw_quoting == 'none':
@@ -89,7 +90,7 @@ def read_raw(file, raw_quoting='legacy'):
     return pd.DataFrame(rows, columns=names)
 
 
-def load_data(file, raw_quoting='legacy'):
+def load_data(file, raw_quoting='none'):
     data = read_raw(file, raw_quoting)
     data = data[[USER_KEY, TIME_KEY, ITEM_KEY]]
 

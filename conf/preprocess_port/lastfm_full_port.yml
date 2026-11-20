@@ -4,6 +4,7 @@ preprocessor: lastfm_aware # dataset (folder) name
 data:
   folder: /home/justin-hangoebl/phd/session-rec/data/lastfm_raw/lastfm-dataset-1K/
   prefix: userid-timestamp-artid-artname-traid-traname
+  raw_quoting: legacy  # parity check against the original
 
 filter:
   min_item_support: 5

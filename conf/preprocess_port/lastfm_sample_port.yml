@@ -4,6 +4,7 @@ preprocessor: lastfm_aware # dataset (folder) name
 data:
   folder: /home/justin-hangoebl/phd/session-rec/data/lastfm_raw/
   prefix: lastfm-sample200k
+  raw_quoting: legacy  # parity check against the original
 
 filter:
   min_item_support: 5
