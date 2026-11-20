@@ -60,4 +60,13 @@ copy of the original to obtain a reference (`reference/pm/orig_legacy_signature_
 
 ## Not ported
 * CSRM, NextItNet, AE, APGNN, SMF, RepeatNet, sbr_adapter: not used by the planned experiments (port plan step 4).
-* Preprocessing (`src/preprocessing`, `run_preprocessing.py`): imports fine, never run (no raw datasets in the repo).
+
+## Preprocessing (`uv run --extra hdf session-rec-preprocess <config.yml>`)
+* rsc15 (`single` and `window`, on a yoochoose-format file built from the prepared data): every output byte-identical.
+* LASTFM 1K (`/opt/datasets/diffrec/lastfm-dataset-1K.tar.gz`): first 200k rows, all four tables identical
+  (`reference/compare_hdf.py`); full file: see below.
+* **LASTFM raw parsing**: the original (pandas 1.x default quoting) silently loses or merges 52,006 of the 19,150,868
+  plays, because a field starting with `"` swallows the following lines. The port reads every line correctly by
+  default (`raw_quoting: none`). `raw_quoting: legacy` reproduces the original row for row (checked against pandas
+  1.2.4 on the full file) and is only for comparing with results produced by the original code.
+* Not run (no raw data on this machine): RetailRocket, Cosmetics, Xing, Diginetica, Tmall, music/playlist preprocessors.
