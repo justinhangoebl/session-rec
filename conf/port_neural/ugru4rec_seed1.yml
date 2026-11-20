@@ -1,0 +1,35 @@
+type: single # single|window|opt
+key: baselines_and_models #added to the csv names
+evaluation: evaluation_user_based # evaluation_user_based
+data:
+  name: rsc15-users
+  folder: data/rsc15_users/prepared/
+  prefix: yoochoose-clicks-100k
+#  slices: 5 #only window
+#  skip: [0,3] #only window
+
+results:
+  folder: results/port/aware-neural/ugru4rec/seed1/
+
+metrics:
+- class: accuracy_multiple.MAP
+  length: [10,20]
+- class: accuracy_multiple.Precision
+  length: [10,20]
+- class: accuracy_multiple.Recall
+  length: [10,20]
+- class: accuracy.HitRate
+  length: [10,20]
+- class: accuracy.MRR
+  length: [10,20]
+- class: saver.Saver
+  length: [50]
+- class: coverage.Coverage
+  length: [20]
+- class: popularity.Popularity
+  length: [20]
+
+algorithms:
+- class: gru4rec_torch.ugru4rec.UGRU4RecTorch
+  params: { loss: 'cross-entropy', constrained_embedding: True, embedding: 0, elu_param: 0, layers: [100], n_epochs: 10, batch_size: 32, dropout_p_embed: 0.0, dropout_p_hidden: 0.4, learning_rate: 0.2, momentum: 0.2, n_sample: 2048, sample_alpha: 0.5, bpreg: 0.0, logq: 1.0, reminders: True, remind_strategy: 'hybrid', remind_sessions_num: 3, weight_base: 9, weight_IRec: 2, seed: 1, device: 'cuda:0' }
+  key: ugru4rec
