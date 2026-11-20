@@ -108,7 +108,7 @@ class Reminder:
 
             if self.w_IRec != 0:
                 # create a series with same index as the recommendation list but with values 0
-                reminder_series = series.copy()
+                reminder_series = series.astype('float64')  # pandas 1.x upcast float32 scores on the first float64 .loc write; pandas 3 raises instead
                 reminder_series.loc[:] = 0
 
                 user_item_recency_series = self.user_item_recency.loc[input_user_id]
@@ -129,7 +129,7 @@ class Reminder:
             if self.w_SSim != 0:  # score = score (Intensity) * 1 [if in top N sessions]
                 past_user_sessions = sorted(past_user_sessions, reverse=True, key=lambda x: x[1])
                 # create a series with same index as the recommendation list but with values 0
-                reminder_series = series.copy()
+                reminder_series = series.astype('float64')  # pandas 1.x upcast float32 scores on the first float64 .loc write; pandas 3 raises instead
                 reminder_series.loc[:] = 0
 
                 for sessions_sim_tuple in past_user_sessions:
