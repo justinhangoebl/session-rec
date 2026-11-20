@@ -97,13 +97,13 @@ class CrossSessModel(torch.nn.Module):
         return h
 
     def context(self, sess_input, his_input):
-        B, S, L = his_input.shape
         E = self.item_embedding
-        his_mask = (his_input != 0)
-        enc = self.attention(E[his_input].reshape(B * S, L, -1), his_mask.reshape(B * S, L).float(), self.his_W, self.his_b).reshape(B, S, -1)
-        his_sess_embed = self.gru(enc, his_mask.any(-1))
         ctx = self.attention(E[sess_input], (sess_input != 0).float(), self.ctx_W, self.ctx_b)
-        if self.use_his:
+        if self.use_his:  # as in the original, the history branch exists only for max_nb_his_sess > 0
+            B, S, L = his_input.shape
+            his_mask = (his_input != 0)
+            enc = self.attention(E[his_input].reshape(B * S, L, -1), his_mask.reshape(B * S, L).float(), self.his_W, self.his_b).reshape(B, S, -1)
+            his_sess_embed = self.gru(enc, his_mask.any(-1))
             his_sess_embed = self.bn_his(his_sess_embed); ctx = self.bn_ctx(ctx)
             gate = torch.sigmoid(torch.cat([ctx, his_sess_embed], 1) @ self.gate_kernel + self.gate_bias)
             ctx = gate * his_sess_embed + (1 - gate) * ctx
