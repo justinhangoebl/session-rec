@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-hdf = ["tables"]  # only for data.type: hdf configs
+hdf = ["tables", "blosc2<4.16"]  # data.type: hdf configs and the session-aware preprocessors (blosc2 4.16 ships no Linux wheel)
 telegram = ["python-telegram-bot"]
 torch = ["torch"]
 

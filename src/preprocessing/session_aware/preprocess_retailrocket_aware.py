@@ -156,10 +156,10 @@ def split_data(data, output_file, min_session_length, slice_id= None): #TODO: ex
         output_file = output_file + "." + str(slice_id)
     output_file = output_file + FILE_TYPE_PREFIX
     subprocess.call(['mkdir', '-p', 'prepared'])
-    train_full_sessions.to_hdf(output_file, 'train')
-    test_sessions.to_hdf(output_file, 'test')
-    train_valid_sessions.to_hdf(output_file, 'valid_train')
-    valid_sessions.to_hdf(output_file, 'valid_test')
+    train_full_sessions.to_hdf(output_file, key='train')
+    test_sessions.to_hdf(output_file, key='test')
+    train_valid_sessions.to_hdf(output_file, key='valid_train')
+    valid_sessions.to_hdf(output_file, key='valid_test')
 
 
 def filter_data(data, min_item_support= MIN_ITEM_SUPPORT, min_session_length= MIN_SESSION_LENGTH, min_user_sessions=MIN_USER_SESSIONS, max_user_sessions=MAX_USER_SESSIONS):

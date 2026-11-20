@@ -197,10 +197,10 @@ def split_data(data, output_file, min_session_length, slice_id= None):
         output_file = output_file +"."+ str(slice_id)
     output_file = output_file + FILE_TYPE_PREFIX
     subprocess.call(['mkdir', '-p', 'prepared_window'])
-    train_full_sessions.to_hdf(output_file, 'train')
-    test_sessions.to_hdf(output_file, 'test')
-    train_valid_sessions.to_hdf(output_file, 'valid_train')
-    valid_sessions.to_hdf(output_file, 'valid_test')
+    train_full_sessions.to_hdf(output_file, key='train')
+    test_sessions.to_hdf(output_file, key='test')
+    train_valid_sessions.to_hdf(output_file, key='valid_train')
+    valid_sessions.to_hdf(output_file, key='valid_test')
 
 def slice_data(data, output_file, num_slices=SLICES_NUM, days_offset=DAYS_OFFSET, days_shift=SLICE_INTERVAL, min_session_length=MIN_SESSION_LENGTH):
     for slice_id in range(0, num_slices):

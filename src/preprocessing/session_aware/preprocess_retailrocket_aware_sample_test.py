@@ -165,7 +165,7 @@ def split_data(data, file, min_session_length, test_sessions): #TODO: extend for
     # subprocess.call(['mkdir', '-p', 'dense/last-session-out'])
     file = file+"_test"+ FILE_TYPE_PREFIX
 
-    train_full_sessions.to_hdf(file, 'train')
-    test_sessions.to_hdf(file, 'test')
-    train_valid_sessions.to_hdf(file, 'valid_train')
-    valid_sessions.to_hdf(file, 'valid_test')
+    train_full_sessions.to_hdf(file, key='train')
+    test_sessions.to_hdf(file, key='test')
+    train_valid_sessions.to_hdf(file, key='valid_train')
+    valid_sessions.to_hdf(file, key='valid_test')

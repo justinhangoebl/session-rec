@@ -36,21 +36,13 @@ def prepare_time(data, time_key=TIME_KEY):
 
 def map_user_and_item_id(data):
     print("map_user_and_item_id")
-    item_map = {}
-    user_map = {}
-    for index, row in data.iterrows():
-        user_id = row[USER_KEY]
-        artist_id = row[ITEM_KEY]
-
-        if user_id not in user_map:
-            user_map[user_id] = len(user_map)
-        if artist_id not in item_map:
-            item_map[artist_id] = len(item_map)
-
-        data.at[index, USER_KEY] = user_map[user_id]
-        data.at[index, ITEM_KEY] = item_map[artist_id]
-
+    # Same mapping as the original iterrows() loop (ids by order of first appearance), vectorised: pandas 3's string
+    # dtype refuses the original cell-by-cell int writes, and the loop took ~20 min on the 19M-row LASTFM file.
+    # astype(object) keeps the original output dtype (object columns holding Python ints).
+    data[USER_KEY] = pd.Series(pd.factorize(data[USER_KEY])[0], index=data.index).astype(object)
+    data[ITEM_KEY] = pd.Series(pd.factorize(data[ITEM_KEY])[0], index=data.index).astype(object)
     return data
+
 
 def make_sessions(data, session_th=SESSION_THRESHOLD, is_ordered=False, user_key=USER_KEY, time_key=TIME_KEY, session_key=SESSION_KEY):
     """Assigns session ids to the events in data without grouping keys"""
@@ -197,10 +189,10 @@ def split_data(data, output_file, min_session_length, slice_id= None): #TODO: ex
         output_file = output_file +"."+ str(slice_id)
     output_file = output_file + FILE_TYPE_PREFIX
     subprocess.call(['mkdir', '-p', 'prepared'])
-    train_full_sessions.to_hdf(output_file, 'train')
-    test_sessions.to_hdf(output_file, 'test')
-    train_valid_sessions.to_hdf(output_file, 'valid_train')
-    valid_sessions.to_hdf(output_file, 'valid_test')
+    train_full_sessions.to_hdf(output_file, key='train')
+    test_sessions.to_hdf(output_file, key='test')
+    train_valid_sessions.to_hdf(output_file, key='valid_train')
+    valid_sessions.to_hdf(output_file, key='valid_test')
 
 def slice_data(data, output_file, num_slices=SLICES_NUM, days_offset=DAYS_OFFSET, days_shift=SLICE_INTERVAL, min_session_length=MIN_SESSION_LENGTH):
     for slice_id in range(0, num_slices):

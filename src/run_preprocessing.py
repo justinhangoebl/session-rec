@@ -49,6 +49,7 @@ def main( conf ):
         except Exception:
             print( 'error for config ', file )
             traceback.print_exc()
+            sys.exit(1)
             
         exit()
     
