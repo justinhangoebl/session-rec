@@ -1,0 +1,4 @@
+454c454
+<             self.P0 = torch.tensor(pop[self.data_iterator.itemidmap.index.values], dtype=torch.float32, device=self.device)
+---
+>             self.P0 = torch.tensor(pop[self.data_iterator.itemidmap.index.values].values, dtype=torch.float32, device=self.device)
