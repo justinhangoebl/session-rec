@@ -1,0 +1,70 @@
+type: window
+key: sr_b
+evaluation: evaluation_user_based
+data:
+  name: lastfm
+  folder: /home/justin-hangoebl/phd/session-rec/data/lastfm/window_port/
+  prefix: userid-timestamp-artid-artname-traid-traname
+  type: hdf
+  slices: 5
+results:
+  folder: /home/justin-hangoebl/phd/session-rec/results/latifi_lastfm/port/sr_b/
+metrics:
+- class: accuracy_multiple.Precision
+  length:
+  - 3
+  - 5
+  - 10
+  - 15
+  - 20
+- class: accuracy_multiple.Recall
+  length:
+  - 3
+  - 5
+  - 10
+  - 15
+  - 20
+- class: accuracy_multiple.MAP
+  length:
+  - 3
+  - 5
+  - 10
+  - 15
+  - 20
+- class: accuracy_multiple.NDCG
+  length:
+  - 3
+  - 5
+  - 10
+  - 15
+  - 20
+- class: accuracy.HitRate
+  length:
+  - 3
+  - 5
+  - 10
+  - 15
+  - 20
+- class: accuracy.MRR
+  length:
+  - 3
+  - 5
+  - 10
+  - 15
+  - 20
+- class: coverage.Coverage
+  length:
+  - 20
+- class: popularity.Popularity
+  length:
+  - 20
+- class: saver.Saver
+  length:
+  - 20
+algorithms:
+- class: baselines.usr.USequentialRules
+  params:
+    steps: 20
+    weighting: quadratic
+    boost_own_sessions: 3.1
+  key: sr_b

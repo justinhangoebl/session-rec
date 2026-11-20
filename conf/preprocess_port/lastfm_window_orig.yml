@@ -1,0 +1,22 @@
+type: window
+mode: session_aware
+preprocessor: lastfm_aware
+data:
+  folder: /home/justin-hangoebl/phd/session-rec/data/lastfm_raw/lastfm-dataset-1K/
+  prefix: userid-timestamp-artid-artname-traid-traname
+
+
+filter:
+  min_item_support: 5
+  min_session_length: 2
+  min_user_sessions: 3
+  max_session_length: 20
+
+params:
+  num_slices: 5
+  days_offset: 500
+  days_shift: 217
+  min_session_length: 2
+
+output:
+  folder: /home/justin-hangoebl/phd/session-rec/data/lastfm/window_orig/

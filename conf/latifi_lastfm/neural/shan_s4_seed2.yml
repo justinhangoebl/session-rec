@@ -1,0 +1,52 @@
+type: window
+key: shan
+evaluation: evaluation_user_based
+data:
+  name: lastfm
+  folder: /home/justin-hangoebl/phd/session-rec/data/lastfm/window_port/
+  prefix: userid-timestamp-artid-artname-traid-traname
+  type: hdf
+  slices: 5
+  skip:
+  - 0
+  - 1
+  - 2
+  - 3
+results:
+  folder: /home/justin-hangoebl/phd/session-rec/results/latifi_lastfm/neural/shan/seed2/
+metrics:
+- class: accuracy_multiple.Precision
+  length: &id001
+  - 3
+  - 5
+  - 10
+  - 15
+  - 20
+- class: accuracy_multiple.Recall
+  length: *id001
+- class: accuracy_multiple.MAP
+  length: *id001
+- class: accuracy_multiple.NDCG
+  length: *id001
+- class: accuracy.HitRate
+  length: *id001
+- class: accuracy.MRR
+  length: *id001
+- class: coverage.Coverage
+  length:
+  - 20
+- class: popularity.Popularity
+  length:
+  - 20
+- class: time_memory_usage.Time_usage_training
+- class: time_memory_usage.Time_usage_testing
+algorithms:
+- class: shan_torch.shan.SHAN
+  params:
+    iter: 100
+    global_dimension: 100
+    lambda_uv: 0.01
+    lambda_a: 10
+    seed: 2
+    device: cpu
+  key: shan
