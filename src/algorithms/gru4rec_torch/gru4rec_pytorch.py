@@ -146,7 +146,7 @@ class GRU4RecModel(nn.Module):
         init_parameter_matrix(self.Wy.weight)
         nn.init.zeros_(self.By.weight)
     def _init_numpy_weights(self, shape):
-        sigma = np.sqrt(6.0 / (shape[0] + shape[1]))
+        sigma = float(np.sqrt(6.0 / (shape[0] + shape[1])))
         m = np.random.rand(*shape).astype('float32') * 2 * sigma - sigma
         return m
     @torch.no_grad()

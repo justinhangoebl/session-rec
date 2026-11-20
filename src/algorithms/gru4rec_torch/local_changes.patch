@@ -1,3 +1,7 @@
+149c149
+<         sigma = np.sqrt(6.0 / (shape[0] + shape[1]))
+---
+>         sigma = float(np.sqrt(6.0 / (shape[0] + shape[1])))
 454c454
 <             self.P0 = torch.tensor(pop[self.data_iterator.itemidmap.index.values], dtype=torch.float32, device=self.device)
 ---
