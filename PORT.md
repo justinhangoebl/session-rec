@@ -34,7 +34,7 @@ GRU4Rec, which uses the authors' official PyTorch version. Old YAML class paths 
 | NSAR | `nsar_torch` | 5 | 0.5453 -> 0.5523 | 0.2321 -> 0.2350 | match (criterion met; high seed variance) |
 | HGRU4Rec | `hgru4rec_torch` | 3 | 0.6125 -> 0.6136 | 0.3310 -> 0.3331 | match (Pop@20 just outside the strict range) |
 | SHAN | `shan_torch` | 3 | 0.3790 -> 0.3779 | 0.1536 -> 0.1532 | match (criterion met) |
-| IIRNN | `IIRNN_torch` | 3 | pending | pending | see the note below |
+| IIRNN | `IIRNN_torch` | 3 | 0.6733 -> 0.6738 | 0.3437 -> 0.3443 | match (all diffs < 0.002; seed spread is tiny, Pop@20 just outside). Reference from the original with two crash fixes (`reference/aware2/orig_iirnn_fixes.patch`) |
 | GRU4Rec | `gru4rec_torch` (official) | 3 | 0.661 -> 0.672 (matched params) | 0.341 -> 0.347 | official implementation; gap is in the old Theano code |
 | UGRU4Rec | `gru4rec_torch.ugru4rec` | 3 | 0.6760 -> 0.6787 | 0.3599 -> 0.3513 | different model (official GRU4Rec, no top1-max) |
 
