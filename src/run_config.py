@@ -866,10 +866,28 @@ def load_class(path):
         path : dict of dicts
             Path to the class, e.g., algorithms.knn.cknn.ContextKNNN
     '''
+    path = LEGACY_CLASS_MAP.get(path, path)
     module_name, class_name = path.rsplit('.', 1)
 
     Class = getattr(importlib.import_module(module_name), class_name)
     return Class
+
+
+# Theano/TensorFlow/Keras implementations that cannot run on the modern stack, mapped to their faithful PyTorch
+# ports (same constructor parameters), so existing YAML configs keep working. GRU4Rec / UGRU4Rec are NOT mapped:
+# they use the official PyTorch GRU4Rec (gru4rec_torch.adapter.GRU4RecTorch / gru4rec_torch.ugru4rec.UGRU4RecTorch),
+# whose parameters differ (e.g. no top1-max loss), so configs must be changed explicitly.
+LEGACY_CLASS_MAP = {
+    'algorithms.narm.narm.NARM': 'algorithms.narm_torch.narm.NARM',
+    'algorithms.narm.unarm.UNARM': 'algorithms.narm_torch.unarm.UNARM',
+    'algorithms.STAMP.model.STAMP.Seq2SeqAttNN': 'algorithms.STAMP_torch.stamp.Seq2SeqAttNN',
+    'algorithms.sgnn.gnn.GGNN': 'algorithms.sgnn_torch.gnn.GGNN',
+    'algorithms.shan.shan.SHAN': 'algorithms.shan_torch.shan.SHAN',
+    'algorithms.nsar.nsar.NSAR': 'algorithms.nsar_torch.nsar.NSAR',
+    'algorithms.NCFS.ncfs.NCFS': 'algorithms.NCFS_torch.ncfs.NCFS',
+    'algorithms.IIRNN.ii_rnn.IIRNN': 'algorithms.IIRNN_torch.ii_rnn.IIRNN',
+    'algorithms.hgru4rec.hgru4rec.HGRU4Rec': 'algorithms.hgru4rec_torch.hgru4rec.HGRU4Rec',
+}
 
 
 def ensure_dir(file_path):
