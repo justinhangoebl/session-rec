@@ -64,7 +64,8 @@ copy of the original to obtain a reference (`reference/pm/orig_legacy_signature_
 ## Preprocessing (`uv run --extra hdf session-rec-preprocess <config.yml>`)
 * rsc15 (`single` and `window`, on a yoochoose-format file built from the prepared data): every output byte-identical.
 * LASTFM 1K (`/opt/datasets/diffrec/lastfm-dataset-1K.tar.gz`): first 200k rows, all four tables identical
-  (`reference/compare_hdf.py`); full file: see below.
+  (`reference/compare_hdf.py`); full 19M-row file with `raw_quoting: legacy`: all four tables identical
+  (train 4,117,563 / test 7,007 / valid_train 4,110,416 / valid_test 7,147 events), ~2x faster than the original.
 * **LASTFM raw parsing**: the original (pandas 1.x default quoting) silently loses or merges 52,006 of the 19,150,868
   plays, because a field starting with `"` swallows the following lines. The port reads every line correctly by
   default (`raw_quoting: none`). `raw_quoting: legacy` reproduces the original row for row (checked against pandas
