@@ -70,4 +70,53 @@ copy of the original to obtain a reference (`reference/pm/orig_legacy_signature_
   plays, because a field starting with `"` swallows the following lines. The port reads every line correctly by
   default (`raw_quoting: none`). `raw_quoting: legacy` reproduces the original row for row (checked against pandas
   1.2.4 on the full file) and is only for comparing with results produced by the original code.
+* LASTFM `window` (5 slices, Latifi et al. settings, `raw_quoting: legacy`): all 20 tables identical to the original.
 * Not run (no raw data on this machine): RetailRocket, Cosmetics, Xing, Diginetica, Tmall, music/playlist preprocessors.
+
+## Real data: Latifi et al. 2021, LASTFM (Table 6)
+Session-aware LASTFM benchmark of Latifi, Mauro, Jannach, "Session-aware recommendation: a surprising quest for the
+state of the art" (Information Sciences 2021, arXiv 2011.03424). Window preprocessing (5 slices), `window` runs with
+`evaluation_user_based`, metrics averaged over the slices as in the paper. Scripts and configs: `reference/latifi/`,
+`conf/latifi_lastfm/`. Compare with `python reference/latifi/compare.py` and `reference/latifi/compare_neural.py`.
+
+**Non-neural (original and port, deterministic).** Every row reproduces the paper within 0.0004 on all seven
+metrics (MAP, P, R, HR, MRR, COV, POP @20), and the port's lists are score-equivalent to the original's on every slice.
+
+| Row | MAP@20 paper -> port | HR@20 paper -> port | MRR@20 paper -> port |
+|---|---|---|---|
+| vsknn_eb | 0.0493 -> 0.0493 | 0.5383 -> 0.5381 | 0.1771 -> 0.1770 |
+| vsknn | 0.0474 -> 0.0474 | 0.5227 -> 0.5223 | 0.1725 -> 0.1724 |
+| vstan_eb (`lambda_spw` 1.4525, see below) | 0.0449 -> 0.0449 | 0.5291 -> 0.5291 | 0.1938 -> 0.1938 |
+| stan_ebr | 0.0442 -> 0.0442 | 0.5159 -> 0.5160 | 0.1902 -> 0.1901 |
+| stan | 0.0400 -> 0.0400 | 0.5012 -> 0.5012 | 0.1886 -> 0.1883 |
+| vstan | 0.0394 -> 0.0394 | 0.5100 -> 0.5100 | 0.1935 -> 0.1933 |
+| sr_b | 0.0359 -> 0.0359 | 0.4622 -> 0.4621 | 0.3487 -> 0.3486 |
+| sr | 0.0348 -> 0.0347 | 0.4615 -> 0.4614 | 0.3350 -> 0.3351 |
+
+* **vstan_eb**: with the parameters printed in the paper's Table A.14 (`lambda_spw` 0.4525) both the original and the
+  port give MAP 0.0437 / HR 0.5204 instead of 0.0449 / 0.5291. With `lambda_spw` 1.4525 (an off-grid value that
+  appears in the repo's own `window_lastfm_vstan_EBR.yml`) both reproduce Table 6 exactly, so the published run used
+  that value and Table A.14 shows 0.4525.
+* vstan: the paper's `lambda_ipw` 0.0001 and the repo's 0.00001 give the same results.
+* VSTAN / U_VSKNN_STAN accept `similarity` but always use cosine (`calc_similarity`), in the original too.
+
+**Neural (port only, 3 seeds; the paper reports one run).** Mean of the seeds; each seed is the mean of the 5 slices.
+
+| Model | MAP@20 paper -> port | HR@20 paper -> port | MRR@20 paper -> port | Verdict |
+|---|---|---|---|---|
+| IIRNN | 0.0311 -> 0.0311 | 0.4729 -> 0.4695 | 0.3491 -> 0.3489 | match; HR 0.7% low, paper just above the best seed |
+| GRU4Rec (official PyTorch) | 0.0307 -> 0.0305 | 0.4681 -> 0.4678 | 0.3342 -> 0.3346 | match; all accuracy metrics inside the seed range |
+| NSAR | 0.0280 -> 0.0279 | 0.4350 -> 0.4338 | 0.2906 -> 0.2906 | match |
+| NARM | 0.0272 -> 0.0270 | 0.4510 -> 0.4534 | 0.3192 -> 0.3168 | match within 0.003; MRR consistently 0.8% low |
+| NCSF | 0.0219 -> 0.0221 | 0.4393 -> 0.4410 | 0.2434 -> 0.2428 | match |
+| HGRU4Rec | 0.0208 -> 0.0210 | 0.4206 -> 0.4210 | 0.3167 -> 0.3171 | match |
+| SHAN | 0.0072 -> 0.0073 | 0.1149 -> 0.1164 | 0.0345 -> 0.0355 | match within 0.0015; slightly above the paper on all accuracy metrics |
+
+* GRU4Rec: the official PyTorch implementation reproduces the old Theano numbers here (paper settings: bpr-max,
+  lr 0.04, momentum 0.1; old Theano defaults for the rest). The gap seen on rsc15 is therefore specific to that setting.
+* SHAN: the port now looks up embedding rows with sparse gradients, so plain SGD updates only the rows a record
+  touches (as the original TF1 IndexedSlices did). Same losses and parameters as the dense version up to float
+  rounding (max diff 5e-6), ~13x faster: about 2.5 h per run on LASTFM instead of ~35 h.
+* NCSF needed a port fix for `max_nb_his_sess: 0` (no history branch, as in the original).
+* Dataset statistics differ from the paper's Table 2 (e.g. 45,854 vs 107,134 items per slice) although every model
+  reproduces, so Table 2 was presumably counted before the item and session filters.

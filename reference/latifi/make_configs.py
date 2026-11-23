@@ -26,6 +26,9 @@ ROWS = {
     'sr': ('sr/window_lastfm_sr.yml', 0),
     'sr_b': ('sr/window_lastfm_usr.yml', 0),
     'vstan_ipw4': ('vstan/window_lastfm_vstan.yml', 0),  # vstan with the paper's lambda_ipw = 0.0001
+    # vstan_eb as Table A.14 prints it (lambda_spw 0.4525) misses Table 6 on the original code too; with
+    # lambda_spw 1.4525 (the off-grid value in the repo's vstan_EBR config) it reproduces Table 6 exactly
+    'vstan_eb_spw': ('vstan/window_lastfm_vstan_EB.yml', 0),
 }
 # one algorithm per config: the Saver file name has no algorithm key, so a second algorithm would overwrite it
 
@@ -39,6 +42,8 @@ for stack in ('orig', 'port'):
         algo['key'] = row
         if row == 'vstan_ipw4':
             algo['params']['lambda_ipw'] = 0.0001
+        if row == 'vstan_eb_spw':
+            algo['params']['lambda_spw'] = 1.4525
         conf['key'] = row
         conf['algorithms'] = [algo]
         conf['data']['folder'] = os.path.join(ROOT, 'data/lastfm', 'window_' + stack) + '/'

@@ -20,6 +20,7 @@ import random
 import numpy as np
 import pandas as pd
 import torch
+import torch.nn.functional as F
 
 
 class _DataGeneration:
@@ -102,11 +103,13 @@ class SHANModel(torch.nn.Module):
         self.the_first_bias = U(d); self.the_second_bias = U(d)
 
     def hybrid(self, user_id, current_session, pre_sessions):
-        u = self.user_embedding_matrix[user_id]                         # (1, d)
-        pre = self.item_embedding_matrix[pre_sessions]
+        # sparse row lookups: plain SGD then updates only the touched rows (as TF1's IndexedSlices did), which is
+        # exactly the dense update but avoids rewriting the full user and item matrices at every batch-size-1 step
+        u = F.embedding(user_id, self.user_embedding_matrix, sparse=True)  # (1, d)
+        pre = F.embedding(pre_sessions, self.item_embedding_matrix, sparse=True)
         w1 = torch.softmax((torch.relu(pre @ self.the_first_w + self.the_first_bias) @ u.T).T, dim=1)
         long_user = (pre * w1.T).sum(0)
-        cat = torch.cat([self.item_embedding_matrix[current_session], long_user[None]], 0)
+        cat = torch.cat([F.embedding(current_session, self.item_embedding_matrix, sparse=True), long_user[None]], 0)
         w2 = torch.softmax((torch.relu(cat @ self.the_second_w + self.the_second_bias) @ u.T).T, dim=1)
         return (cat * w2.T).sum(0), u
 
@@ -141,12 +144,13 @@ class SHAN:
             all_loss = 0.0
             for bu, bi, bs, bn, bp in recs:
                 h, u = self.model.hybrid(bu, bs, bp)
-                item_e = self.model.item_embedding_matrix[bi]; neg_e = self.model.item_embedding_matrix[bn]
+                item_e = F.embedding(bi, self.model.item_embedding_matrix, sparse=True)
+                neg_e = F.embedding(bn, self.model.item_embedding_matrix, sparse=True)
                 pos = h[None] @ item_e.T; neg = h[None] @ neg_e.T
                 loss = torch.mean(-torch.log(torch.sigmoid(pos - neg)))
                 loss = loss + (self.lambda_a * l2(self.model.the_first_w) + self.lambda_a * l2(self.model.the_second_w)) + \
                     (self.lambda_u_v * l2(u) + self.lambda_u_v * l2(item_e) + self.lambda_u_v * l2(neg_e))
-                opt.zero_grad(); loss.backward(); opt.step()
+                opt.zero_grad(set_to_none=True); loss.backward(); opt.step()
                 all_loss += loss.item()
             print('loss = ' + str(all_loss))
         self.model.eval()

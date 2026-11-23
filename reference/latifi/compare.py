@@ -26,6 +26,7 @@ PAPER = {
     'sr': [0.0348, 0.0765, 0.3383, 0.4615, 0.3350, 0.4982, 0.0544],
 }
 PAPER['vstan_ipw4'] = PAPER['vstan']
+PAPER['vstan_eb_spw'] = PAPER['vstan_eb']  # lambda_spw 1.4525 instead of Table A.14's 0.4525
 
 
 def load(stack, row):
