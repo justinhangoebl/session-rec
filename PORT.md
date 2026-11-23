@@ -13,6 +13,12 @@ Python 3.12, numpy 2.5, pandas 3.1, scikit-learn 1.9, PyTorch 2.15 (see `uv.lock
   the [min, max] of the new runs" (`python reference/compare_neural.py <ref_dir> <port_dir>`). With 3 seeds that range
   is narrow, so borderline models got 5 seeds on both stacks.
 
+* **Reference lists are not in git.** The 106 `*-Saver@50.csv` top-50 recommendation lists under `reference/`
+  (~1.2 GB) are kept out of the repository (`.gitignore`) and published as the release archive
+  `session-rec-reference-lists.tar.gz` with a `.sha256` file. Extract it in the repository root
+  (`tar -xzf session-rec-reference-lists.tar.gz && sha256sum -c session-rec-reference-lists.sha256`); the
+  metric CSVs next to the lists are in git.
+
 ## Non-neural models (rsc15-100k, full test set; session-aware on the synthetic rsc15-users data)
 | Status | Models |
 |---|---|

@@ -1,7 +1,36 @@
 <h1>session-rec</h1>
+<h2>This fork: uv / Python 3.12 port</h2>
+
+A port of session-rec to a current stack (Python 3.12, NumPy 2, pandas 3, scikit-learn 1.9, PyTorch 2) managed with
+[uv](https://docs.astral.sh/uv/). The goal is only the port: same models, same configs, same results as the original.
+Details, parity criteria and every comparison are in [PORT.md](PORT.md).
+
+```bash
+uv sync --extra torch --extra hdf          # torch: neural models; hdf: hdf data and session-aware preprocessing
+uv run session-rec conf/<config>.yml       # run a config end to end
+uv run session-rec-preprocess conf/<preprocessing>.yml
+```
+
+Existing YAML configs run unchanged: old Theano/TF/Keras class paths are mapped to the PyTorch ports.
+
+| Status | Models | How it was checked |
+|---|---|---|
+| Ported, identical | AR, SR, SKNN, V-SKNN, Pop, SessionPop, RPop, ItemKNN, ContextTree, Weighted hybrid; session-aware SR, USR, VSKNN, UVSKNN, STAN, USTAN, VSTAN, UVSTAN; preprocessing (rsc15, LASTFM) | score-equivalent recommendation lists / byte-identical tables vs the original stack |
+| Ported to PyTorch | NARM, STAMP, SR-GNN, UNARM, NCFS, NSAR, HGRU4Rec, IIRNN, SHAN | within seed noise of the original code (3-5 seeds on both stacks) |
+| Replaced | GRU4Rec, UGRU4Rec: the authors' official PyTorch GRU4Rec | official code, not a translation of the old Theano version; scores slightly above it on rsc15; UGRU4Rec has no top1-max loss |
+| Partly verified | Mixed hybrid | 91% of lists score-equivalent, the rest differ by a tied item |
+| Dropped | CSRM, NextItNet, AE, APGNN, SMF, RepeatNet, sbr_adapter | not needed for the planned experiments |
+
+**Published numbers.** Latifi et al. 2021 (Information Sciences), Table 6, LASTFM: all 8 non-neural rows reproduce
+within 0.0004 (on the original and the port) and all 7 neural models within about 0.003 (port, 3 seeds). vstan_eb needs
+`lambda_spw` 1.4525 instead of the 0.4525 printed in Table A.14.
+
+The reference recommendation lists (`*-Saver@50.csv`, ~1.2 GB) used by `reference/parity_lists.py` are not in git;
+they are published as a release archive (see PORT.md).
+
 <h2>Introduction</h2>
 
-<b>session-rec</b> is a Python-based framework for building and evaluating recommender systems (Python 3.5.x). It
+<b>session-rec</b> is a Python-based framework for building and evaluating recommender systems (originally Python 3.5.x; see the port section above). It
 implements a suite of state-of-the-art algorithms and baselines for session-based and session-aware recommendation.
 <br><br>
 The authors developed this framework to carry out the experiments described in:
