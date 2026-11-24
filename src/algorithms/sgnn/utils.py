@@ -1,13 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time : 2018/9/23 2:52
 # @Author : {ZM7}
-# @File : utils.py
-# @Software: PyCharm
 
 import networkx as nx
 import numpy as np
-import operator
 from _collections import OrderedDict
 
 
@@ -136,24 +132,18 @@ class Data():
     def get_slice_by_session_items(self, session, max_len):
         items, n_node, A_in, A_out, alias_inputs = [], [], [], [], []
 
-        # predefined mask size:
-        MASK_SIZE = max_len   #8
+        MASK_SIZE = max_len
 
-        # create an empty mask of pre-defined size and fill it
         innermask = np.zeros(MASK_SIZE, dtype = int)
         innermask[:len(session)] = 1
         mask = np.asarray([innermask])
 
-        # transform the session into an ndarray
         session_array = np.zeros(MASK_SIZE, dtype = int)
         for i in range(len(session)):
             session_array[i] = session[i]
 
-        # print('input: ' + str(session_array))
-        # do original code, no for loop, needed.
         n_node.append(len(np.unique(session_array)))
 
-        # could also remove unneded statements
         max_n_node = np.max(n_node)
         node = np.unique(session_array)
         items.append(node.tolist() + (max_n_node - len(node)) * [0])
@@ -175,12 +165,10 @@ class Data():
         A_out.append(u_A_out)
         alias_inputs.append([np.where(node == i)[0][0] for i in session_array])
 
-        # create empty target array
         target = [1]
         target = np.asarray(target, dtype = int)
         return A_in, A_out, alias_inputs, items, mask, target
 
-# Convert training sessions to sequences and renumber items to start from 1
 def obtian_tra(tra_sess, sess_clicks):
     item_dict = {}
     reversed_item_dict = {}
@@ -199,15 +187,14 @@ def obtian_tra(tra_sess, sess_clicks):
                 item_dict[i] = item_ctr
                 reversed_item_dict[item_ctr] = i
                 item_ctr += 1
-        if len(outseq) < 2:  # Doesn't occur
+        if len(outseq) < 2:
             continue
         train_ids += [s]
         train_dates += [date]
         train_seqs += [outseq]
-    print(item_ctr)  # 43098, 37484
+    print(item_ctr)
     return train_ids, train_dates, train_seqs, item_dict, reversed_item_dict
 
-# Convert test sessions to sequences, ignoring items that do not appear in training set
 def obtian_tes(tes_sess, sess_clicks, item_dict):
     test_ids = []
     test_seqs = []
@@ -253,42 +240,18 @@ def prepare_data(train, test, max_len=None):
     curid = -1
     curdate = None
     for tr in train.itertuples():
-        # for data in reader:
         sessid = tr.SessionId
         if curdate and not curid == sessid:
-            # date = ''
-            # if opt.dataset == 'yoochoose':
-            #     date = time.mktime(time.strptime(curdate[:19], '%Y-%m-%dT%H:%M:%S'))
-            # else:
-            #     date = time.mktime(time.strptime(curdate, '%Y-%m-%d'))
-            date = tr.Time  # SARA
+            date = tr.Time
             sess_date_tr[curid] = date
         curid = sessid
-        # if opt.dataset == 'yoochoose':
-        #     item = data['item_id']
-        # else:
-        #     item = data['item_id'], int(data['timeframe']) todo: timeframe ?!
-        item = int(tr.ItemId)  # SARA
-        # curdate = ''
-        # if opt.dataset == 'yoochoose':
-        #     curdate = data['timestamp']
-        # else:
-        #     curdate = data['eventdate']
-        curdate = tr.Time  # SARA
+        item = int(tr.ItemId)
+        curdate = tr.Time
         if sessid in sess_clicks:
             sess_clicks[sessid] += [item]
         else:
             sess_clicks[sessid] = [item]
         ctr += 1
-    # date = ''
-    # if opt.dataset == 'yoochoose':
-    #     date = time.mktime(time.strptime(curdate[:19], '%Y-%m-%dT%H:%M:%S'))
-    # else:
-    #     date = time.mktime(time.strptime(curdate, '%Y-%m-%d'))
-    #     for i in list(sess_clicks):   #this use digenetica 'timeframe' to sort items of each session. sess_clicks will be list of item_id s which are sorted based on their timeframe
-    #         sorted_clicks = sorted(sess_clicks[i], key=operator.itemgetter(1))
-    #         sess_clicks[i] = [c[0] for c in sorted_clicks]
-    # sess_date[curid] = date
     sess_date_tr[curid] = tr.Time
 
     sess_date_ts = OrderedDict()
@@ -312,10 +275,6 @@ def prepare_data(train, test, max_len=None):
 
     tra_sess = list(sess_date_tr.items())
     tes_sess = list(sess_date_ts.items())
-
-    # Sort sessions by date MALTE: not needed
-#     tra_sess = sorted(tra_sess, key=operator.itemgetter(1))  # [(session_id, timestamp), (), ]
-#     tes_sess = sorted(tes_sess, key=operator.itemgetter(1))  # [(session_id, timestamp), (), ]
 
 
     # Choosing item count >=5 gives approximately the same number of items as reported in paper

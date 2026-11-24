@@ -1,4 +1,3 @@
-import theano.misc.pkl_utils as pickle
 import dill
 
 class FileModel:
@@ -14,7 +13,6 @@ class FileModel:
     '''
 
     def __init__(self, modelfile):
-        # config.experimental.unpickle_gpu_on_cpu = True
         self.model = dill.load(open(modelfile, 'rb'))
 
     def fit(self, train, test=None):

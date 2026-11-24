@@ -1,0 +1,33 @@
+# Random search (type: opt) on the validation split (train_tr / train_valid): each iteration draws one value per
+# params_opt entry and evaluates it; the first metric (optimize) picks the best. type: bayopt uses the same file
+# format with scikit-optimize (ranges {from, to, type} become continuous / integer dimensions).
+type: opt
+key: tuning
+evaluation: evaluation
+data:
+  name: rsc15-100k
+  folder: data/rsc15/prepared/
+  prefix: yoochoose-clicks-100k
+  opts: {sessions_test: 200}
+results:
+  folder: results/tuning/
+metrics:
+- class: accuracy.HitRate
+  length: [20]
+optimize:
+  class: accuracy.MRR
+  length: [20]
+  iterations: 20
+algorithms:
+- class: baselines.sr.SequentialRules
+  params_opt:
+    steps: {from: 1, to: 20, in: 20, type: int32}
+    weighting: [div, linear, quadratic, log, same]
+  key: sr
+- class: knn.vsknn.VMContextKNN
+  params_opt:
+    k: [50, 100, 500, 1000]
+    sample_size: [500, 1000, 2500, 5000]
+    weighting: [same, div, linear, quadratic, log]
+    weighting_score: [same, div, linear, quadratic, log]
+  key: vsknn

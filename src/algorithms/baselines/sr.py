@@ -5,9 +5,6 @@ import collections as col
 from datetime import datetime as dt
 from datetime import timedelta as td
 
-from pympler import asizeof
-import sys
-
 
 class SequentialRules:
     '''
@@ -107,7 +104,6 @@ class SequentialRules:
 
         self.rules = rules
 
-    #         print( 'Size of map: ', asizeof.asizeof(self.rules))
 
     def linear(self, i):
         return 1 - (0.1 * i) if i <= 100 else 0
@@ -172,12 +168,6 @@ class SequentialRules:
                 else:
                     break
 
-        # test
-        #         for i in range(2,4):
-        #             if len(self.session_items) >= i :
-        #                 item = self.session_items[-i]
-        #                 for key in self.rules[ item ]:
-        #                     preds[ predict_for_item_ids == key ] += self.rules[item][key] * (1/i)
 
         series = pd.Series(data=preds, index=predict_for_item_ids)
 

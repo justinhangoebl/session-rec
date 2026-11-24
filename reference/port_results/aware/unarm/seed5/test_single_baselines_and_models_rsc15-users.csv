@@ -1,2 +1,0 @@
-Metrics;MAP@10: ;MAP@20: ;Precision@10: ;Precision@20: ;Recall@10: ;Recall@20: ;HitRate@10: ;HitRate@20: ;MRR@10: ;MRR@20: ;Saver@50: ;Coverage@20: ;Popularity@20: ;
-unarm-epochs=20-lr=0.01-factors=50-reminders=True-remind_strategy=hybrid-remind_sessions_num=4-weight_base=10-weight_IRec=7-seed=5-device=cuda:0;0.03458734655142945;0.02506229555646073;0.07837592162408494;0.05493889506110783;0.3105031820480785;0.4052967628262839;0.4643975356024644;0.5843854156145843;0.29629598902147114;0.3045762210211767;1;0.9822707125809751;0.15485589507708147;

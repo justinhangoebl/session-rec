@@ -68,7 +68,6 @@ class USequentialRules:
         self.time_key = time_key
         self.session = -1
         self.session_items = []
-        # user_based
         self.user_key = user_key
         self.boost_own_sessions = boost_own_sessions
 
@@ -77,7 +76,7 @@ class USequentialRules:
             if remind_strategy == 'hybrid':
                 self.reminder = Reminder(remind_strategy=remind_strategy, remind_sessions_num=remind_sessions_num,
                                          weight_base=weight_base, weight_IRec=weight_IRec)
-            else:  # basic reminders
+            else:
                 self.reminder = Reminder(remind_strategy=remind_strategy, remind_sessions_num=remind_sessions_num,
                                          reminders_num=reminders_num, remind_mode=remind_mode)
 
@@ -114,10 +113,9 @@ class USequentialRules:
         # In user-based SR: rule-set is a dic like: {item_a: {item_b: [score, {userId1}]}, item_b: {item_c: [score, {userId_1, userId_2}], item_d: [score, {userId_2, userId_3}], item_a: [score, {userId_4}]}}
             # fist element of the list is : score, the rest is a SET of user ids who had this rule in their past sessions
 
-        # get the position of the columns
         index_session = train.columns.get_loc(self.session_key)
         index_item = train.columns.get_loc(self.item_key)
-        index_user = train.columns.get_loc(self.user_key)  # user_based
+        index_user = train.columns.get_loc(self.user_key)
 
         for row in train.itertuples(index=False):
 
@@ -138,7 +136,7 @@ class USequentialRules:
                         userSet = set()
                         rules[prev_item][item_id] = [0, userSet]
 
-                    if not user_id in rules[prev_item][item_id][1]: # in userSet
+                    if not user_id in rules[prev_item][item_id][1]:
                         rules[prev_item][item_id][1].add(user_id)
 
                     weight = getattr(self, self.weighting)(i)
@@ -152,21 +150,17 @@ class USequentialRules:
 
             last_items.append(item_id)
 
-            # reminders
-            if self.hasReminders:  # user_based  # for 'session_similarity' or 'recency'
+            if self.hasReminders:
                 self.reminder.reminders_fit_in_loop(row, index_user, index_session, index_item)
-                # prev_s_id = self.reminder.reminders_fit_in_loop(row, index_user, index_session, index_item, prev_s_id)
 
         if self.pruning > 0:
             self.prune(rules)
 
         self.rules = rules
 
-        # reminders
-        if self.hasReminders:  # user_based
+        if self.hasReminders:
             self.reminder.reminders_fit(train, self.user_key, self.item_key, self.time_key)
 
-    #         print( 'Size of map: ', asizeof.asizeof(self.rules))
 
     def linear(self, i):
         return 1 - (0.1 * i) if i <= 100 else 0
@@ -215,12 +209,10 @@ class USequentialRules:
 
         preds = np.zeros(len(predict_for_item_ids))
 
-        # useless: add extend_session_length to make predictions
         if input_item_id in self.rules:
             for key in self.rules[input_item_id]:
-                # preds[predict_for_item_ids == key] = self.rules[input_item_id][key]
                 preds[predict_for_item_ids == key] = self.rules[input_item_id][key][0]
-                if self.boost_own_sessions is not None and self.boost_own_sessions > 0.0 and input_user_id in self.rules[input_item_id][key][1]: # if the rule also belong to the same user_id, then boost its score!
+                if self.boost_own_sessions is not None and self.boost_own_sessions > 0.0 and input_user_id in self.rules[input_item_id][key][1]:
                     preds[predict_for_item_ids == key] = preds[predict_for_item_ids == key] + self.rules[input_item_id][key][0] * self.boost_own_sessions
 
 
@@ -235,22 +227,16 @@ class USequentialRules:
                 else:
                     break
 
-        # test
-        #         for i in range(2,4):
-        #             if len(self.session_items) >= i :
-        #                 item = self.session_items[-i]
-        #                 for key in self.rules[ item ]:
-        #                     preds[ predict_for_item_ids == key ] += self.rules[item][key] * (1/i)
 
         series = pd.Series(data=preds, index=predict_for_item_ids)
 
         series = series / series.max()
 
-        if self.hasReminders:  # user_based
+        if self.hasReminders:
             if self.reminder.remind_strategy == 'hybrid':
                 series = self.reminder.reminders_predict_next(input_user_id, series, self.item_key,
                                                               self.time_key, input_timestamp=timestamp)
-            else:  # basic reminders
+            else:
                 series = self.reminder.reminders_predict_next(input_user_id, series, self.item_key, self.time_key)
 
         return series

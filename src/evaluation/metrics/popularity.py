@@ -29,13 +29,9 @@ class Popularity:
             It must have a header. Column names are arbitrary, but must correspond to the ones you set during the initialization of the network (session_key, item_key, time_key properties).
         '''
         self.train_actions = len( train.index )
-        #group the data by the itemIds
         grp = train.groupby(self.item_key)
-        #count the occurence of every itemid in the trainingdataset
         self.pop_scores = grp.size()
-        #sort it according to the  score
         self.pop_scores.sort_values(ascending=False, inplace=True)
-        #normalize
         self.pop_scores = self.pop_scores / self.pop_scores[:1].values[0]
         
     def reset(self):
@@ -58,9 +54,7 @@ class Popularity:
         result: pandas.Series
             Series of scores with the item id as the index
         '''
-        #only keep the k- first predictions
         recs = result[:self.length]
-        #take the unique values out of those top scorers
         items = recs.index.unique()
                 
         self.sum += ( self.pop_scores[ self.pop_scores.index.intersection(items) ].sum() / len( items ) )

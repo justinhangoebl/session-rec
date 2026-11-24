@@ -76,7 +76,7 @@ class MixedHybrid:
 
         '''
 
-        if (self.session != session_id):  # new session
+        if (self.session != session_id):
             self.session = session_id
             self.session_items = list()
 
@@ -90,25 +90,22 @@ class MixedHybrid:
             prediction.sort_values(ascending=False, inplace=True)
             prediction = prediction[prediction > 0]
             if i == 0:
-                # first algorithm
-                if len(prediction) >= self.recomLengths[i]: #handling the case which prediction list is less than defined recommendation list
+                if len(prediction) >= self.recomLengths[i]: # the prediction list can be shorter than the recommendation length
                     final = prediction[:self.recomLengths[i]]
                 else:
                     final = prediction
             else :
                 if i == (len(predictions)-1) :
-                    #last algorithm
-                    for idx, pre in list(enumerate(final)):
-                        if final.index[idx] in prediction.index:
-                            prediction = prediction.drop(final.index[idx]) #pre2.drop(final.index[idx], inplace=True)
-                    final = pd.concat([final, prediction])
-                    break
-                else:
-                    # all algorithms except first & last ones
                     for idx, pre in list(enumerate(final)):
                         if final.index[idx] in prediction.index:
                             prediction = prediction.drop(final.index[idx])
-                    if len(prediction) >= self.recomLengths[i]: #handling the case which prediction list is less than defined recommendation list
+                    final = pd.concat([final, prediction])
+                    break
+                else:
+                    for idx, pre in list(enumerate(final)):
+                        if final.index[idx] in prediction.index:
+                            prediction = prediction.drop(final.index[idx])
+                    if len(prediction) >= self.recomLengths[i]: # the prediction list can be shorter than the recommendation length
                         final = pd.concat([final, prediction[:self.recomLengths[i]]])
                     else:
                         final = pd.concat([final, prediction])

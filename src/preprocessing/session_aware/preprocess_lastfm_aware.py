@@ -4,43 +4,35 @@ from datetime import datetime, timezone, timedelta
 import dateutil.parser
 import subprocess
 import csv
-import sys
 
-# data config (all methods)
 
-# file params
 FILE_TYPE_PREFIX = '.hdf'
-CLEAN_TEST = True # Preprocess the test set
+CLEAN_TEST = True
 
-# keys
 USER_KEY='UserId'
 ITEM_KEY='ItemId'
 TIME_KEY='Time'
 SESSION_KEY='SessionId'
 
 SESSION_THRESHOLD = 30 * 60
-# filtering config (all methods)
 MIN_ITEM_SUPPORT = 5
 MIN_SESSION_LENGTH = 2
 MIN_USER_SESSIONS = 3
-MAX_SESSION_LENGTH = 20  # 40
-# MAX_USER_SESSIONS = 200
+MAX_SESSION_LENGTH = 20
 SLICES_NUM = 5
-SLICE_INTERVAL = 217 # total_interval = 1587
-DAYS_OFFSET = 500  # skip first 1/3 of data because it contains much fewer interactions (and users) in comparision with last 2/3
+SLICE_INTERVAL = 217
+DAYS_OFFSET = 500  # skip the first third of the data: it has far fewer interactions (and users) than the last two thirds
 
 def prepare_time(data, time_key=TIME_KEY):
     print("prepare_time")
     """Assigns session ids to the events in data without grouping keys"""
-    # timestamp = (dateutil.parser.parse(data[ITEM_KEY])).timestamp()
     data[time_key] = data[time_key].apply(lambda x: (dateutil.parser.parse(x)).timestamp())
     return data
 
 def map_user_and_item_id(data):
     print("map_user_and_item_id")
-    # Same mapping as the original iterrows() loop (ids by order of first appearance), vectorised: pandas 3's string
-    # dtype refuses the original cell-by-cell int writes, and the loop took ~20 min on the 19M-row LASTFM file.
-    # astype(object) keeps the original output dtype (object columns holding Python ints).
+    # ids in order of first appearance; vectorised because pandas 3's string dtype refuses cell-by-cell int writes
+    # (and a row loop takes ~20 min on the 19M-row file). astype(object) keeps the dtype of the written files stable.
     data[USER_KEY] = pd.Series(pd.factorize(data[USER_KEY])[0], index=data.index).astype(object)
     data[ITEM_KEY] = pd.Series(pd.factorize(data[ITEM_KEY])[0], index=data.index).astype(object)
     return data
@@ -50,60 +42,34 @@ def make_sessions(data, session_th=SESSION_THRESHOLD, is_ordered=False, user_key
     """Assigns session ids to the events in data without grouping keys"""
     print("make_sessions")
     if not is_ordered:
-        # sort data by user and time
         data.sort_values(by=[user_key, time_key], ascending=True, inplace=True)
-    # compute the time difference between queries
     tdiff = np.diff(data[time_key].values)
-    # check which of them are bigger then session_th
     split_session = tdiff > session_th
     split_session = np.r_[True, split_session]
-    # check when the user chenges is data
     new_user = data[user_key].values[1:] != data[user_key].values[:-1]
     new_user = np.r_[True, new_user]
-    # a new sessions stars when at least one of the two conditions is verified
     new_session = np.logical_or(new_user, split_session)
-    # compute the session ids
     session_ids = np.cumsum(new_session)
     data[session_key] = session_ids
     return data
 
-def read_raw(file, raw_quoting='none'):
-    """Read the raw LASTFM 1K tsv.
-
-    raw_quoting='none' (default) parses every line as written (csv.QUOTE_NONE): the correct reading of the file.
-    raw_quoting='legacy' reproduces the original (pandas 1.x read_csv with default quoting): a field that
-    starts with '"' is read as quoted and swallows the following lines, so 52,006 of the 19,150,868 plays are lost or
-    merged. pandas 3 raises on such input instead, so the legacy parse uses Python's lenient csv module, which gives
-    row-for-row the same result as pandas 1.2.4 (checked on the full file). Use it only to compare with results
-    produced by the original code.
-    """
+def read_raw(file):
+    # QUOTE_NONE: some fields start with '"'; with default quoting such a field swallows the following lines
+    # (52,006 of the 19,150,868 plays of the 1K file are then lost or merged, as in the original session-rec)
     names = [USER_KEY, TIME_KEY, "artist_id", "artist", ITEM_KEY, "track"]
-    if raw_quoting == 'none':
-        return pd.read_csv(file + '.tsv', sep='\t', names=names, quoting=csv.QUOTE_NONE)
-    assert raw_quoting == 'legacy', raw_quoting
-    csv.field_size_limit(sys.maxsize)
-    rows = []
-    with open(file + '.tsv', newline='', encoding='utf-8') as fh:
-        for r in csv.reader(fh, delimiter='\t'):
-            r = (r + [''] * 6)[:6]
-            rows.append([x if x != '' else np.nan for x in r])
-    return pd.DataFrame(rows, columns=names)
+    return pd.read_csv(file + '.tsv', sep='\t', names=names, quoting=csv.QUOTE_NONE)
 
 
-def load_data(file, raw_quoting='none'):
-    data = read_raw(file, raw_quoting)
+def load_data(file):
+    data = read_raw(file)
     data = data[[USER_KEY, TIME_KEY, ITEM_KEY]]
 
-    # remove rows with NA userId
     data = data[~pd.isnull(data[ITEM_KEY])].copy()
 
-    # prepare time format
     data = prepare_time(data, time_key=TIME_KEY)
 
-    # Map ids
     data = map_user_and_item_id(data)
 
-    # partition interactions into sessions with 30-minutes idle time
     data = make_sessions(data)
 
     data_start = datetime.fromtimestamp(data[TIME_KEY].min(), timezone.utc)
@@ -123,30 +89,24 @@ def filter_data(data, min_item_support= MIN_ITEM_SUPPORT, min_session_length= MI
         [USER_KEY, SESSION_KEY]).size().max() <= max_session_length
     count = 0
     while not condition:
-        # keep items with >=5 interactions
         item_pop = data[ITEM_KEY].value_counts()
         good_items = item_pop[item_pop >= min_item_support].index
         data = data[data[ITEM_KEY].isin(good_items)]
-        # remove sessions with length < 2
         session_length = data[SESSION_KEY].value_counts()
         good_sessions = session_length[session_length >= min_session_length].index
         data = data[data[SESSION_KEY].isin(good_sessions)]
-        # remove sessions with length > 40
         session_length = data[SESSION_KEY].value_counts()
         good_sessions = session_length[session_length <= max_session_length].index
         data = data[data[SESSION_KEY].isin(good_sessions)]
-        # let's keep only returning users (with >= 2 sessions)
         sess_per_user = data.groupby(USER_KEY)[SESSION_KEY].nunique()
         good_users = sess_per_user[sess_per_user >= min_user_sessions].index
         data = data[data[USER_KEY].isin(good_users)]
         condition = data.groupby(USER_KEY)[SESSION_KEY].nunique().min() >= min_user_sessions and data.groupby(
             [USER_KEY, SESSION_KEY]).size().min() >= min_session_length and data.groupby([ITEM_KEY]).size().min() >= min_item_support and data.groupby(
             [USER_KEY, SESSION_KEY]).size().max() <= max_session_length
-        # condition = false #if want to apply the filters once
         count += 1
         print(count)
 
-    # output
     data_start = datetime.fromtimestamp(data[TIME_KEY].min(), timezone.utc)
     data_end = datetime.fromtimestamp(data[TIME_KEY].max(), timezone.utc)
 
@@ -172,7 +132,6 @@ def last_session_out_split(data, min_session_length):
     if CLEAN_TEST:
         train_items = train[ITEM_KEY].unique()
         test = test[test[ITEM_KEY].isin(train_items)]
-        #  remove sessions in test shorter than min_session_length
         slen = test[SESSION_KEY].value_counts()
         good_sessions = slen[slen >= min_session_length].index
         test = test[test[SESSION_KEY].isin(good_sessions)].copy()
@@ -180,7 +139,7 @@ def last_session_out_split(data, min_session_length):
     test = test.reset_index(drop=True)
     return train, test
 
-def split_data(data, output_file, min_session_length, slice_id= None): #TODO: extend for supproting more than one sessions per use for test
+def split_data(data, output_file, min_session_length, slice_id= None):
     """
         assign the last session of every user to the test set and the remaining ones to the training set
         """
@@ -204,8 +163,6 @@ def split_data(data, output_file, min_session_length, slice_id= None): #TODO: ex
           format(len(data), data[USER_KEY].nunique(), data[SESSION_KEY].nunique(), data[ITEM_KEY].nunique()))
 
     print('Write to disk')
-    # write to disk
-    # subprocess.call(['mkdir', '-p', 'dense/last-session-out'])
     if slice_id is not None:
         output_file = output_file +"."+ str(slice_id)
     output_file = output_file + FILE_TYPE_PREFIX
@@ -226,7 +183,6 @@ def split_data_slice(data, output_file, slice_id, days_offset, days_shift, min_s
     end_day = days_offset + ((slice_id+1) * days_shift)
     end = datetime.fromtimestamp(data[TIME_KEY].min(), timezone.utc) + timedelta(end_day)
 
-    # prefilter the timespan
     session_max_times = (data.groupby([SESSION_KEY])[TIME_KEY]).max()
     greater_start = session_max_times[session_max_times >= start.timestamp()].index
     lower_end = session_max_times[session_max_times <= end.timestamp()].index
@@ -236,5 +192,4 @@ def split_data_slice(data, output_file, slice_id, days_offset, days_shift, min_s
     data = filter_data(data)
 
     print("split data")
-    # training-test split
     split_data(data, output_file, min_session_length, slice_id)

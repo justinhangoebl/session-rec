@@ -1,2 +1,0 @@
-Metrics;MAP@10: ;MAP@20: ;Precision@10: ;Precision@20: ;Recall@10: ;Recall@20: ;HitRate@10: ;HitRate@20: ;MRR@10: ;MRR@20: ;Saver@50: ;Coverage@20: ;Popularity@20: ;
-ii_rnn-learning_rate=0.002-dropout_pkeep=0.4-embedding_size=100-use_last_hidden_state=False-max_session_representation=15-max_epoch=100-seed=2-device=cuda:0;0.049703200679727354;0.03267169093812506;0.10944349055651502;0.06900313099686728;0.40859008444563516;0.4804723589266823;0.5926674073325927;0.6742753257246743;0.3381204079113389;0.3438570874778572;1;0.966928060006819;0.16765834983494698;

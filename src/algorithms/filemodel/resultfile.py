@@ -1,6 +1,4 @@
-import theano.misc.pkl_utils as pickle
 import pandas as pd
-import numpy as np
 
 class ResultFile:
     '''
@@ -15,7 +13,6 @@ class ResultFile:
     '''
 
     def __init__(self, file):
-        # config.experimental.unpickle_gpu_on_cpu = True
         self.file = file
     
     def init(self, train, test=None, slice=None):

@@ -118,7 +118,7 @@ class StrategicHybridSeq:
 
         '''
 
-        if (self.session != session_id):  # new session
+        if (self.session != session_id):
             self.session = session_id
             self.session_items = list()
             self.session_seq = 0
@@ -197,8 +197,6 @@ class StrategicHybridSeq:
 
             prev_item = item_id
 
-        # if self.pruning > 0:
-        #     self.prune(rules)
 
         return rules, max
 

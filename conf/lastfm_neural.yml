@@ -1,0 +1,53 @@
+# Neural models on LASTFM with the tuned parameters of Latifi et al. 2021, seed 1. Set device: cpu without a GPU.
+type: window
+key: neural
+evaluation: evaluation_user_based
+data:
+  name: lastfm
+  folder: data/lastfm/prepared/
+  prefix: userid-timestamp-artid-artname-traid-traname
+  type: hdf
+  slices: 5
+results:
+  folder: results/lastfm/
+metrics:
+- class: accuracy_multiple.Precision
+  length: [3, 5, 10, 15, 20]
+- class: accuracy_multiple.Recall
+  length: [3, 5, 10, 15, 20]
+- class: accuracy_multiple.MAP
+  length: [3, 5, 10, 15, 20]
+- class: accuracy_multiple.NDCG
+  length: [3, 5, 10, 15, 20]
+- class: accuracy.HitRate
+  length: [3, 5, 10, 15, 20]
+- class: accuracy.MRR
+  length: [3, 5, 10, 15, 20]
+- class: coverage.Coverage
+  length: [20]
+- class: popularity.Popularity
+  length: [20]
+- class: time_memory_usage.Time_usage_training
+- class: time_memory_usage.Time_usage_testing
+algorithms:
+- class: gru4rec.adapter.GRU4RecTorch
+  params: { loss: bpr-max, elu_param: 0, layers: [100], n_epochs: 10, batch_size: 100, dropout_p_embed: 0.0, dropout_p_hidden: 0.0, learning_rate: 0.04, momentum: 0.1, n_sample: 2048, sample_alpha: 0.75, bpreg: 1.0, logq: 0.0, embedding: 0, constrained_embedding: false, seed: 1, device: 'cuda:0' }
+  key: gru4rec
+- class: narm.narm.NARM
+  params: { epochs: 20, lr: 0.007, hidden_units: 100, factors: 100, seed: 1, device: 'cuda:0' }
+  key: narm
+- class: iirnn.ii_rnn.IIRNN
+  params: { learning_rate: 0.001, dropout_pkeep: 0.6, embedding_size: 100, use_last_hidden_state: true, max_session_representation: 20, max_epoch: 100, seed: 1, device: 'cuda:0' }
+  key: iirnn
+- class: nsar.nsar.NSAR
+  params: { num_epoch: 20, batch_size: 64, keep_pr: 0.25, learning_rate: 0.003, hidden_units: 100, seed: 1, device: 'cuda:0' }
+  key: nsar
+- class: ncfs.ncfs.NCFS
+  params: { window_sz: 1, max_nb_his_sess: 0, att_alpha: 1, seed: 1, device: 'cuda:0' }
+  key: ncfs
+- class: hgru4rec.hgru4rec.HGRU4Rec
+  params: { final_act: linear, dropout_p_hidden_usr: 0.7, dropout_p_hidden_ses: 0.1, dropout_p_init: 0.3, momentum: 0.5, learning_rate: 0.09, user_propagation_mode: all, batch_size: 50, torch_seed: 1, device: cpu }
+  key: hgru4rec
+- class: shan.shan.SHAN
+  params: { iter: 100, global_dimension: 100, lambda_uv: 0.01, lambda_a: 10, seed: 1, device: cpu }
+  key: shan

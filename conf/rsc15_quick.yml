@@ -1,0 +1,34 @@
+# Smoke test on the bundled rsc15 sample: a few baselines and one neural model, ~1 minute on a CPU.
+type: single
+key: quick
+evaluation: evaluation
+data:
+  name: rsc15-100k
+  folder: data/rsc15/prepared/
+  prefix: yoochoose-clicks-100k
+  opts: {sessions_test: 200}
+results:
+  folder: results/rsc15_quick/
+metrics:
+- class: accuracy.HitRate
+  length: [5, 20]
+- class: accuracy.MRR
+  length: [5, 20]
+- class: coverage.Coverage
+  length: [20]
+- class: popularity.Popularity
+  length: [20]
+- class: time_memory_usage.Time_usage_training
+- class: time_memory_usage.Time_usage_testing
+algorithms:
+- class: baselines.pop.Pop
+  key: pop
+- class: baselines.sr.SequentialRules
+  params: { steps: 20, weighting: quadratic }
+  key: sr
+- class: knn.vsknn.VMContextKNN
+  params: { k: 500, sample_size: 5000, weighting: quadratic, weighting_score: div, idf_weighting: 5 }
+  key: vsknn
+- class: narm.narm.NARM
+  params: { epochs: 2, lr: 0.007, hidden_units: 100, factors: 100, seed: 1, device: cpu }
+  key: narm

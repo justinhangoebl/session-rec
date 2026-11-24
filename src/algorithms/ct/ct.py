@@ -1,15 +1,9 @@
 from .context_tree_BVMM import TreeRoot, History
-from .context_tree_BVMM import StdExpert, DirichletExpert, BayesianMixtureExpert
-from collections import deque, OrderedDict
-import sys
-import csv
-import pickle
+# the experts are created by eval(expert) from the config string, so they must be imported here
+from .context_tree_BVMM import StdExpert, DirichletExpert, BayesianMixtureExpert  # noqa: F401
+from collections import OrderedDict
 import time
-import scipy.io
-import random
-import collections
 
-import numpy as np
 import pandas as pd
 import time
 
@@ -132,16 +126,13 @@ class ContextTree:
         predictions = [proba for rec, proba in best_item_and_probas]
         if normalize:
             predictions = preprocessing.normalize([predictions])
-            #predictions = [i / sum(predictions) for i in predictions]
             series = pd.Series(data=predictions[0], index=[int(rec) for rec, proba in best_item_and_probas])
         else:
             series = pd.Series(data=predictions, index=[int(rec) for rec, proba in best_item_and_probas])
         self.user_to_previous_recoms[current_session] = series
 
 
-
     def predict_next(self, session_id, input_item_id, predict_for_item_ids, timestamp=0, skip=False, mode_type="view"):
-        # print(input_item_id)
         '''
         Gives predicton scores for a selected set of items on how likely they be the next item in the session.
 
@@ -165,7 +156,6 @@ class ContextTree:
         self.match_context(row, predict_for_item_ids, False)
 
         previous_recoms = self.user_to_previous_recoms.get(session_id)
-        #print(previous_recoms[:5])
 
         return previous_recoms
 

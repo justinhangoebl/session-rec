@@ -114,12 +114,8 @@ venv.bak/
 .idea/session-rec.iml
 .idea/vcs.xml
 .idea/workspace.xml
-conf/in/*
-conf/out/*
 
 .idea
 /data/
 envs/
 
-# Reference recommendation lists: ~1.2 GB, published as a release archive (see PORT.md)
-reference/**/*-Saver@50.csv

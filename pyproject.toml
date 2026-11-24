@@ -1,7 +1,7 @@
 [project]
 name = "session-rec"
 version = "0.1.0"
-description = "Session-based and session-aware recommendation evaluation framework (uv port of rn5l/session-rec)"
+description = "Session-based and session-aware recommendation: evaluation framework and baselines (port of rn5l/session-rec)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -20,7 +20,6 @@ dependencies = [
 
 [project.optional-dependencies]
 hdf = ["tables", "blosc2<4.16"]  # data.type: hdf configs and the session-aware preprocessors (blosc2 4.16 ships no Linux wheel)
-telegram = ["python-telegram-bot"]
 torch = ["torch"]
 
 [project.scripts]
@@ -31,8 +30,7 @@ session-rec-preprocess = "run_preprocessing:cli"
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
-# The YAML configs load classes by dotted path (algorithms.knn.vsknn.VMContextKNN ...),
-# so the three top-level packages keep their original names.
+# Configs load classes by dotted path below these packages (knn.vsknn.VMContextKNN -> algorithms.knn.vsknn...)
 [tool.setuptools]
 package-dir = {"" = "src"}
 py-modules = ["run_config", "run_preprocessing"]

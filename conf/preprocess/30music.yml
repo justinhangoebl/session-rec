@@ -1,0 +1,17 @@
+type: window
+mode: session_based
+preprocessor: music
+data:
+  folder: data/30music/raw/
+  prefix: 30music-200ks
+filter:
+  min_item_support: 2
+  min_session_length: 5
+params:
+  days_test: 5
+  days_train: 90
+  num_slices: 5
+  days_offset: 0
+  days_shift: 60
+output:
+  folder: data/30music/prepared/

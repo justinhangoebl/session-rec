@@ -65,7 +65,7 @@ class StrategicHybrid:
 
         '''
 
-        if (self.session != session_id):  # new session
+        if (self.session != session_id):
             self.session = session_id
             self.session_items = list()
 

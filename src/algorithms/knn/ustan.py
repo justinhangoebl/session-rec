@@ -55,43 +55,38 @@ class USTAN:
         self.session_key = session_key
         self.item_key = item_key
         self.time_key = time_key
-        self.user_key = user_key  # user_based
+        self.user_key = user_key
 
         self.extend = extend
         self.remind = remind
         self.extending_mode = extending_mode
 
-        # user_based
         self.extend_session_length = extend_session_length
         self.refine_mode = refine_mode
         self.boost_own_sessions = boost_own_sessions
 
-        # updated while recommending
         self.session = -1
         self.session_items = []
         self.relevant_sessions = set()
-        # user_based
         self.items_previous = []
-        self.last_user_items = {}  # to extend the session model
-        self.recent_user_items = {}  # to remind
-        self.recent_user_sessions = {}  # to remind
-        self.user_item_intensity = dict()  # to remind (for 'session_similarity')
-        # reminders
+        self.last_user_items = {}
+        self.recent_user_items = {}
+        self.recent_user_sessions = {}
+        self.user_item_intensity = dict()
         self.hasReminders = reminders
         if self.hasReminders:
             if remind_strategy == 'hybrid':
                 self.reminder = Reminder(remind_strategy=remind_strategy, remind_sessions_num=remind_sessions_num,
                                          weight_base=weight_base, weight_IRec=weight_IRec, weight_SSim=weight_SSim)
-            else:  # basic reminders
+            else:
                 self.reminder = Reminder(remind_strategy=remind_strategy, remind_sessions_num=remind_sessions_num,
                                          reminders_num=reminders_num, remind_mode=remind_mode)
 
-        # cache relations once at startup
         self.session_item_map = dict()
         self.item_session_map = dict()
         self.session_time = dict()
         self.min_time = -1
-        self.session_user_map = dict()  # user_based
+        self.session_user_map = dict()
 
         self.sim_time = 0
 
@@ -111,54 +106,46 @@ class USTAN:
         index_session = train.columns.get_loc(self.session_key)
         index_item = train.columns.get_loc(self.item_key)
         index_time = train.columns.get_loc(self.time_key)
-        index_user = train.columns.get_loc(self.user_key)  # user_based
+        index_user = train.columns.get_loc(self.user_key)
 
         session = -1
         session_items = []
         time = -1
-        user = -1  # user_based
-        # cnt = 0
+        user = -1
         for row in train.itertuples(index=False):
-            # cache items of sessions
             if row[index_session] != session:
                 if len(session_items) > 0:
                     self.session_item_map.update({session: session_items})
-                    # cache the last time stamp of the session
                     self.session_time.update({session: time})
-                    self.session_user_map.update({session: user})  # user_based
+                    self.session_user_map.update({session: user})
                     if time < self.min_time:
                         self.min_time = time
-                user = row[index_user]  # user_based
+                user = row[index_user]
                 session = row[index_session]
                 session_items = []
             time = row[index_time]
             session_items.append(row[index_item])
 
-            # cache sessions involving an item
             map_is = self.item_session_map.get(row[index_item])
             if map_is is None:
                 map_is = set()
                 self.item_session_map.update({row[index_item]: map_is})
             map_is.add(row[index_session])
 
-            # add last viewed items (by the user) to the last_user_items dictionary
-            if self.extend_session_length is not None:  # user_based
+            if self.extend_session_length is not None:
                 self.extend_session_in_fit(row, index_user, index_item)
 
-            # reminders
-            if self.hasReminders:  # user_based  # for 'session_similarity' or 'recency'
+            if self.hasReminders:
                 self.reminder.reminders_fit_in_loop(row, index_user, index_session, index_item)
 
-        # reminders # save item_intensity in the last N session for each user
-        if self.hasReminders:  # user_based
+        if self.hasReminders:
             self.reminder.reminders_fit(train, self.user_key, self.item_key, self.time_key)
 
-        # Add the last tuple
         self.session_item_map.update({session: session_items})
         self.session_time.update({session: time})
-        self.session_user_map.update({session: user})  # user_based
+        self.session_user_map.update({session: user})
 
-        if self.sample_size == 0:  # use all session as possible neighbors
+        if self.sample_size == 0:
             print('!!!!! runnig KNN without a sample size (check config)')
 
     def predict_next(self, session_id, input_item_id, input_user_id, predict_for_item_ids=None, timestamp=0, skip=False,
@@ -182,11 +169,8 @@ class USTAN:
 
         '''
 
-        #         gc.collect()
-        #         process = psutil.Process(os.getpid())
-        #         print( 'cknn.predict_next: ', process.memory_info().rss, ' memory used')
 
-        if (self.session != session_id):  # new session
+        if (self.session != session_id):
 
             if (self.extend):
                 self.session_item_map[self.session] = self.session_items;
@@ -199,13 +183,13 @@ class USTAN:
 
                 ts = time.time()
                 self.session_time.update({self.session: ts})
-                self.session_user_map.update({self.session: input_user_id})  # user_based
+                self.session_user_map.update({self.session: input_user_id})
 
             self.session = session_id
             self.session_items = list()
             self.relevant_sessions = set()
-            self.items_previous = []  # user_based
-            self.need_refine = True  # user_based
+            self.items_previous = []
+            self.need_refine = True
 
         if type == 'view':
             self.session_items.append(input_item_id)
@@ -215,14 +199,12 @@ class USTAN:
 
         items = self.session_items
 
-        # we add extra items form the user profile as long as the session is not long enough!
-        if self.extend_session_length is not None and input_user_id in self.last_user_items:  # user_based
+        if self.extend_session_length is not None and input_user_id in self.last_user_items:
             items = self.extend_session_in_predict_next(items, input_user_id)
 
         neighbors = self.find_neighbors(items, input_item_id, session_id, timestamp, input_user_id)
         scores = self.score_items(neighbors, items, timestamp)
 
-        # Create things in the format ..
         predictions = np.zeros(len(predict_for_item_ids))
         mask = np.isin(predict_for_item_ids, list(scores.keys()))
 
@@ -231,7 +213,7 @@ class USTAN:
         predictions[mask] = values
         series = pd.Series(data=predictions, index=predict_for_item_ids)
 
-        if self.hasReminders:  # user_based
+        if self.hasReminders:
             if self.reminder.remind_strategy == 'hybrid':
                 if self.reminder.w_SSim == 0:
                     series = self.reminder.reminders_predict_next(input_user_id, series, self.item_key,
@@ -243,7 +225,7 @@ class USTAN:
                                                                   past_user_sessions=past_user_sessions,
                                                                   session_item_map=self.session_item_map,
                                                                   input_timestamp=timestamp)
-            else:  # basic reminders
+            else:
                 if self.reminder.remind_strategy == 'session_similarity':
                     past_user_sessions = self.calc_similarity(items, self.reminder.recent_user_sessions[input_user_id],
                                                               timestamp, input_user_id)
@@ -360,19 +342,14 @@ class USTAN:
             tuples.append((session, time))
 
         tuples = sorted(tuples, key=itemgetter(1), reverse=True)
-        # print 'sorted list ', sortedList
         cnt = 0
         for element in tuples:
             cnt = cnt + 1
             if cnt > number:
                 break
             sample.add(element[0])
-        # print 'returning sample of size ', len(sample)
         return sample
 
-    # -----------------
-    # Find a set of neighbors, returns a list of tuples (sessionid: similarity)
-    # -----------------
     def find_neighbors(self, session_items, input_item_id, session_id, timestamp, user_id):
         '''
         Finds the k nearest neighbors for the given session_id and the current item input_item_id.
@@ -413,12 +390,11 @@ class USTAN:
 
         self.relevant_sessions = self.relevant_sessions | self.sessions_for_item(input_item_id)
 
-        if self.sample_size == 0:  # use all session as possible neighbors
+        if self.sample_size == 0:
 
-            # print('!!!!! runnig KNN without a sample size (check config)')
             return self.relevant_sessions
 
-        else:  # sample some sessions
+        else:
 
             if len(self.relevant_sessions) > self.sample_size:
 
@@ -458,13 +434,11 @@ class USTAN:
                 pos_map[item] = self.session_pos_weight(pos, length, self.lambda_spw)
                 pos += 1
 
-        # print 'nb of sessions to test ', len(sessionsToTest), ' metric: ', self.metric
         items = set(session_items)
         neighbors = []
         cnt = 0
         for session in sessions:
             cnt = cnt + 1
-            # get items of the session, look up the cache first
             n_items = self.items_for_session(session)
 
             similarity = self.cosine(items, set(n_items), pos_map)
@@ -475,7 +449,7 @@ class USTAN:
 
                 similarity *= decay
 
-            if self.boost_own_sessions is not None:  # user_based
+            if self.boost_own_sessions is not None:
                 similarity = self.apply_boost(session, user_id, similarity)
 
             neighbors.append((session, similarity))
@@ -502,12 +476,9 @@ class USTAN:
         --------
         out : list of tuple (item, score)
         '''
-        # now we have the set of relevant items to make predictions
         scores = dict()
         s_items = set(current_session)
-        # iterate over the sessions
         for session in neighbors:
-            # get the items in this session
             n_items = self.items_for_session(session[0])
 
             pos_last = {}
@@ -550,7 +521,7 @@ class USTAN:
         self.session_item_map = dict()
         self.item_session_map = dict()
         self.session_time = dict()
-        self.session_user_map = dict()  # user_based
+        self.session_user_map = dict()
 
     def support_users(self):
         '''
@@ -584,7 +555,6 @@ class USTAN:
 
     def extend_session_in_fit(self, row, index_user, index_item):
         if not row[index_user] in self.last_user_items:
-            # create a new list to save the user's last viewed items
             self.last_user_items[row[index_user]] = []
         self.last_user_items[row[index_user]].append(row[index_item])
         if len(self.last_user_items[row[index_user]]) > self.extend_session_length:
@@ -593,33 +563,26 @@ class USTAN:
 
     def extend_session_in_predict_next(self, items, input_user_id):
         if len(items) < self.extend_session_length:
-            # update the session with items from the users past
             n = len(self.session_items)
             addItems = self.extend_session_length - n
             prev_items = self.last_user_items[input_user_id][-addItems:]
             items = prev_items + self.session_items
 
-            # if it is beginning of the session => find relevant sessions for added items
             if len(self.items_previous) == 0:
                 for item in set(prev_items):
                     self.relevant_sessions = self.relevant_sessions | self.sessions_for_item(item)
-            # not beginning of the session, so we already retrieved neighbours for the extended session
             elif self.refine_mode:
-                # if the first item that was in the previous step, is not in the current step anymore => refine the self.relevant_sessions
                 if not self.items_previous[0] in items:
                     self.relevant_sessions = set()
                     for item in set(items):
                         self.relevant_sessions = self.relevant_sessions | self.sessions_for_item(item)
 
-            # update self.items_previous
             self.items_previous = items
-        # the session is long enough => refine the self.relevant_sessions to just consider current session's items
         elif self.refine_mode and self.need_refine:
             self.relevant_sessions = set()
             for item in set(self.session_items):
-                # then we can continue with just adding related sessions for the current item
                 self.relevant_sessions = self.relevant_sessions | self.sessions_for_item(item)
-            # refined once after reach to the defined length, no need to do refine anymore
+            # the session reached extend_session_length, so later steps need no refinement
             self.need_refine = False
 
         return items

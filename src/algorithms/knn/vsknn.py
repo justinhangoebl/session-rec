@@ -3,13 +3,11 @@ from math import sqrt
 import random
 import time
 
-from pympler import asizeof
 import numpy as np
 import pandas as pd
 from math import log10
 from datetime import datetime as dt
 from datetime import timedelta as td
-import math
 
 class VMContextKNN:
     '''
@@ -62,22 +60,20 @@ class VMContextKNN:
         self.session_key = session_key
         self.item_key = item_key
         self.time_key = time_key
-        self.extend = extend  # to add evaluated sessions to the maps
+        self.extend = extend
         self.remind = remind
-        self.push_reminders = push_reminders  # give more score to the items that belongs to the current session
-        self.add_reminders = add_reminders  # force the last 3 items of the current session to be in the top 20
+        self.push_reminders = push_reminders
+        self.add_reminders = add_reminders
         self.idf_weighting = idf_weighting
         self.idf_weighting_session = idf_weighting_session
         self.normalize = normalize
         self.last_n_days = last_n_days
         self.last_n_clicks = last_n_clicks
         
-        #updated while recommending
         self.session = -1
         self.session_items = []
         self.relevant_sessions = set()
 
-        # cache relations once at startup
         self.session_item_map = dict() 
         self.item_session_map = dict()
         self.session_time = dict()
@@ -116,13 +112,10 @@ class VMContextKNN:
         session = -1
         session_items = set()
         time = -1
-        #cnt = 0
         for row in train.itertuples(index=False):
-            # cache items of sessions
             if row[index_session] != session:
                 if len(session_items) > 0:
                     self.session_item_map.update({session : session_items})
-                    # cache the last time stamp of the session
                     self.session_time.update({session : time})
                     if time < self.min_time:
                         self.min_time = time
@@ -131,14 +124,12 @@ class VMContextKNN:
             time = row[index_time]
             session_items.add(row[index_item])
             
-            # cache sessions involving an item
             map_is = self.item_session_map.get( row[index_item] )
             if map_is is None:
                 map_is = set()
                 self.item_session_map.update({row[index_item] : map_is})
             map_is.add(row[index_session])
             
-        # Add the last tuple    
         self.session_item_map.update({session : session_items})
         self.session_time.update({session : time})
         
@@ -169,11 +160,8 @@ class VMContextKNN:
         
         '''
         
-#         gc.collect()
-#         process = psutil.Process(os.getpid())
-#         print( 'cknn.predict_next: ', process.memory_info().rss, ' memory used')
         
-        if( self.session != session_id ): #new session
+        if( self.session != session_id ):
             
             if( self.extend ):
                 item_set = set( self.session_items )
@@ -208,7 +196,6 @@ class VMContextKNN:
         neighbors = self.find_neighbors( items, input_item_id, session_id, self.dwelling_times, timestamp )
         scores = self.score_items( neighbors, items, timestamp )
         
-        # Create things in the format ..
         predictions = np.zeros(len(predict_for_item_ids))
         mask = np.isin( predict_for_item_ids, list(scores.keys()) )
         
@@ -420,14 +407,12 @@ class VMContextKNN:
             tuples.append((session, time))
             
         tuples = sorted(tuples, key=itemgetter(1), reverse=True)
-        #print 'sorted list ', sortedList
         cnt = 0
         for element in tuples:
             cnt = cnt + 1
             if cnt > number:
                 break
             sample.add( element[0] )
-        #print 'returning sample of size ', len(sample)
         return sample
         
         
@@ -449,12 +434,12 @@ class VMContextKNN:
         
         self.relevant_sessions = self.relevant_sessions | self.sessions_for_item( input_item_id )
                
-        if self.sample_size == 0: #use all session as possible neighbors
+        if self.sample_size == 0:
             
             print('!!!!! runnig KNN without a sample size (check config)')
             return self.relevant_sessions
 
-        else: #sample some sessions
+        else:
                          
             if len(self.relevant_sessions) > self.sample_size:
                 
@@ -500,36 +485,25 @@ class VMContextKNN:
             dt.append(0)
             dt = pd.Series(dt, index=session_items)  
             dt = dt / dt.max()
-            #dt[session_items[-1]] = dt.mean() if len(session_items) > 1 else 1
             dt[session_items[-1]] = 1
         
-            #print(dt)
             for i in range(len(dt)):
                 pos_map[session_items[i]] *= dt.iloc[i]
-            #print(pos_map)    
         
         if self.idf_weighting_session:
             max = -1
             for item in session_items:
                 pos_map[item] = self.idf[item] if item in self.idf else 0
-#                 if pos_map[item] > max:
-#                     max = pos_map[item]
-#             for item in session_items:
-#                 pos_map[item] = pos_map[item] / max
                 
             
-        #print 'nb of sessions to test ', len(sessionsToTest), ' metric: ', self.metric
         items = set(session_items)
         neighbors = []
         cnt = 0
         for session in sessions:
             cnt = cnt + 1
-            # get items of the session, look up the cache first 
             n_items = self.items_for_session( session )
             sts = self.session_time[session]
 
-            #dot product
-            #similarity = self.vec(items, n_items, pos_map)
             similarity = getattr(self, self.similarity)( items, n_items, pos_map )
             
             if similarity > 0:
@@ -540,7 +514,6 @@ class VMContextKNN:
                     decay = pow( 7/8, days )
                     similarity *= decay
                 
-                #print("days:",days," => ",decay)
                 
                 neighbors.append((session, similarity))
                 
@@ -548,9 +521,6 @@ class VMContextKNN:
         return neighbors
 
 
-    #-----------------
-    # Find a set of neighbors, returns a list of tuples (sessionid: similarity) 
-    #-----------------
     def find_neighbors( self, session_items, input_item_id, session_id, dwelling_times, timestamp ):
         '''
         Finds the k nearest neighbors for the given session_id and the current item input_item_id. 
@@ -586,12 +556,9 @@ class VMContextKNN:
         --------
         out : list of tuple (item, score)           
         '''
-        # now we have the set of relevant items to make predictions
         scores = dict()
         iset = set( current_session )
-        # iterate over the sessions
         for session in neighbors:
-            # get the items in this session
             items = self.items_for_session( session[0] )
             step = 1
             

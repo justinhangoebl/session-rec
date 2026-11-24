@@ -3,13 +3,8 @@ from math import sqrt, exp
 import random
 import time
 
-from pympler import asizeof
 import numpy as np
 import pandas as pd
-from math import log10
-from datetime import datetime as dt
-from datetime import timedelta as td
-import math
 
 class STAN:
     '''
@@ -58,12 +53,10 @@ class STAN:
         self.extend = extend
         self.remind = remind
         
-        #updated while recommending
         self.session = -1
         self.session_items = []
         self.relevant_sessions = set()
 
-        # cache relations once at startup
         self.session_item_map = dict() 
         self.item_session_map = dict()
         self.session_time = dict()
@@ -91,13 +84,10 @@ class STAN:
         session = -1
         session_items = []
         time = -1
-        #cnt = 0
         for row in train.itertuples(index=False):
-            # cache items of sessions
             if row[index_session] != session:
                 if len(session_items) > 0:
                     self.session_item_map.update({session : session_items})
-                    # cache the last time stamp of the session
                     self.session_time.update({session : time})
                     if time < self.min_time:
                         self.min_time = time
@@ -106,18 +96,16 @@ class STAN:
             time = row[index_time]
             session_items.append(row[index_item])
             
-            # cache sessions involving an item
             map_is = self.item_session_map.get( row[index_item] )
             if map_is is None:
                 map_is = set()
                 self.item_session_map.update({row[index_item] : map_is})
             map_is.add(row[index_session])
             
-        # Add the last tuple    
         self.session_item_map.update({session : session_items})
         self.session_time.update({session : time})
         
-        if self.sample_size == 0: #use all session as possible neighbors
+        if self.sample_size == 0:
             print('!!!!! runnig KNN without a sample size (check config)')
         
     def predict_next( self, session_id, input_item_id, predict_for_item_ids, input_user_id=None, timestamp=0, skip=False, type='view'):
@@ -140,11 +128,8 @@ class STAN:
         
         '''
         
-#         gc.collect()
-#         process = psutil.Process(os.getpid())
-#         print( 'cknn.predict_next: ', process.memory_info().rss, ' memory used')
         
-        if( self.session != session_id ): #new session
+        if( self.session != session_id ):
             
             if( self.extend ):
                 self.session_item_map[self.session] = self.session_items;
@@ -171,7 +156,6 @@ class STAN:
         neighbors = self.find_neighbors( self.session_items, input_item_id, session_id, timestamp )
         scores = self.score_items( neighbors, self.session_items, timestamp )
         
-        # Create things in the format ..
         predictions = np.zeros(len(predict_for_item_ids))
         mask = np.isin( predict_for_item_ids, list(scores.keys()) )
         
@@ -289,20 +273,15 @@ class STAN:
             tuples.append((session, time))
             
         tuples = sorted(tuples, key=itemgetter(1), reverse=True)
-        #print 'sorted list ', sortedList
         cnt = 0
         for element in tuples:
             cnt = cnt + 1
             if cnt > number:
                 break
             sample.add( element[0] )
-        #print 'returning sample of size ', len(sample)
         return sample
 
 
-    #-----------------
-    # Find a set of neighbors, returns a list of tuples (sessionid: similarity) 
-    #-----------------
     def find_neighbors( self, session_items, input_item_id, session_id, timestamp ):
         '''
         Finds the k nearest neighbors for the given session_id and the current item input_item_id. 
@@ -344,12 +323,11 @@ class STAN:
         
         self.relevant_sessions = self.relevant_sessions | self.sessions_for_item( input_item_id )
                
-        if self.sample_size == 0: #use all session as possible neighbors
+        if self.sample_size == 0:
             
-            #print('!!!!! runnig KNN without a sample size (check config)')
             return self.relevant_sessions
 
-        else: #sample some sessions
+        else:
                          
             if len(self.relevant_sessions) > self.sample_size:
                 
@@ -390,13 +368,11 @@ class STAN:
                 pos_map[item] = self.session_pos_weight( pos, length, self.lambda_spw )
                 pos += 1
             
-        #print 'nb of sessions to test ', len(sessionsToTest), ' metric: ', self.metric
         items = set(session_items)
         neighbors = []
         cnt = 0
         for session in sessions:
             cnt = cnt + 1
-            # get items of the session, look up the cache first 
             n_items = self.items_for_session( session )
 
             similarity = self.cosine(items, set(n_items), pos_map) 
@@ -431,12 +407,9 @@ class STAN:
         --------
         out : list of tuple (item, score)           
         '''
-        # now we have the set of relevant items to make predictions
         scores = dict()
         s_items = set( current_session )
-        # iterate over the sessions
         for session in neighbors:
-            # get the items in this session
             n_items = self.items_for_session( session[0] )
             
             pos_last = {}

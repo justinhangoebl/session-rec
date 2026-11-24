@@ -394,33 +394,24 @@ class NDCG:
             Series of scores with the item id as the index
         '''
 
-        # relatedItems = list(set(result) & set(next_items))
-        # for i in range(len(relatedItems)):
-        #     idx = list(result).index(relatedItems[i])+1 #ranked position = index+1
-        #     if idx == 1:
-        #         res += rel
-        #     else:
-        #         res += rel / np.log2(idx)
 
         res = 0;
         rel = 1;
         ranked_list_len = min(len(result), self.length)
 
         next_items = set(next_items)
-        for i in range(ranked_list_len):          #range(self.length):
+        for i in range(ranked_list_len):
             if result[i] in next_items:
                 if i == 0:
                     res += rel
                 else:
                     res += rel / np.log2(i+1)
 
-        # res = rel[0]+np.sum(rel[1:] / np.log2(np.arange(2, rel.size + 1)))
         return res
 
 
     def sortFunc(e):
         return e.values;
-
 
 
     def add_batch(self, result, next_item):
@@ -534,13 +525,6 @@ class NDCG_relevance:
             Series of scores with the item id as the index
         '''
 
-        # relatedItems = list(set(result) & set(next_items))
-        # for i in range(len(relatedItems)):
-        #     idx = list(result).index(relatedItems[i])+1 #ranked position = index+1
-        #     if idx == 1:
-        #         res += rel
-        #     else:
-        #         res += rel / np.log2(idx)
 
         res = 0;
         rel = 1;
@@ -550,26 +534,20 @@ class NDCG_relevance:
         ranked_list_len = min(len(result), self.length)
 
         next_items=list(next_items)
-        #next_items = set(next_items)
-        for i in range(ranked_list_len):          #range(self.length):
+        for i in range(ranked_list_len):
             if result[i] in next_items:
-                #if item is bought
                 b=self.buys.loc[self.buys['SessionId'] == session].ItemId.values
                 r=result[i]
                 if result[i] in self.buys.loc[self.buys['SessionId'] == session].ItemId.values:
                     rel+=rel_buy
-                    #print("in buys")
 
-                #how many time item appers in the next_items list
 
                 rel+=next_items.count(result[i])*rel_count_next_items
 
 
-                #if item has been clicked before in the session
                 session_rows=self.test_set.loc[self.test_set['SessionId'] == session]
                 previous_items=session_rows.iloc[:position]
                 if result[i] in  previous_items.ItemId.values:
-                    #print("previous items")
                     rel+=rel_click
 
                 if i == 0:
@@ -579,13 +557,11 @@ class NDCG_relevance:
 
                 rel=0
 
-        # res = rel[0]+np.sum(rel[1:] / np.log2(np.arange(2, rel.size + 1)))
         return res
 
 
     def sortFunc(e):
         return e.values;
-
 
 
     def add_batch(self, result, next_item):

@@ -4,9 +4,6 @@ import random
 import time
 import numpy as np
 import pandas as pd
-import os
-import psutil
-import gc
 
 class ContextKNN:
     '''
@@ -52,12 +49,10 @@ class ContextKNN:
         self.extend = extend
         self.normalize = normalize
         
-        #updated while recommending
         self.session = -1
         self.session_items = []
         self.relevant_sessions = set()
 
-        # cache relations once at startup
         self.session_item_map = dict() 
         self.item_session_map = dict()
         self.session_time = dict()
@@ -83,27 +78,22 @@ class ContextKNN:
         session = -1
         session_items = set()
         time = -1
-        #cnt = 0
         for row in train.itertuples(index=False):
-            # cache items of sessions
             if row[index_session] != session:
                 if len(session_items) > 0:
                     self.session_item_map.update({session : session_items})
-                    # cache the last time stamp of the session
                     self.session_time.update({session : time})
                 session = row[index_session]
                 session_items = set()
             time = row[index_time]
             session_items.add(row[index_item])
             
-            # cache sessions involving an item
             map_is = self.item_session_map.get( row[index_item] )
             if map_is is None:
                 map_is = set()
                 self.item_session_map.update({row[index_item] : map_is})
             map_is.add(row[index_session])
             
-        # Add the last tuple    
         self.session_item_map.update({session : session_items})
         self.session_time.update({session : time})
         
@@ -128,16 +118,8 @@ class ContextKNN:
         
         '''
         
-#         gc.collect()
-#         process = psutil.Process(os.getpid())
-#         print( 'cknn.predict_next: ', process.memory_info().rss, ' memory used')
 
-        # if(type(session_id) is np.ndarray):
-        #     session_id = session_id[0]
-        # if(type(input_item_id) is np.ndarray):
-        #     input_item_id = input_item_id[0]
-
-        if( self.session != session_id ): #new session
+        if( self.session != session_id ):
             
             if( self.extend ):
                 item_set = set( self.session_items )
@@ -166,7 +148,6 @@ class ContextKNN:
         neighbors = self.find_neighbors( set(self.session_items), input_item_id, session_id )
         scores = self.score_items( neighbors )
                 
-        # add some reminders
         if self.remind:
              
             reminderScore = 5
@@ -175,7 +156,6 @@ class ContextKNN:
             cnt = 0
             for elem in self.session_items[-takeLastN:]:
                 cnt = cnt + 1
-                #reminderScore = reminderScore + (cnt/100)
                  
                 oldScore = scores.get( elem )
                 newScore = 0
@@ -183,25 +163,18 @@ class ContextKNN:
                     newScore = reminderScore
                 else:
                     newScore = oldScore + reminderScore
-                #print 'old score ', oldScore
-                # update the score and add a small number for the position 
                 newScore = (newScore * reminderScore) + (cnt/100)
                  
                 scores.update({elem : newScore})
         
-        #push popular ones
         if self.pop_boost > 0:
                
             pop = self.item_pop( neighbors )
-            # Iterate over the item neighbors
-            #print itemScores
             for key in scores:
                 item_pop = pop.get(key)
-                # Gives some minimal MRR boost?
                 scores.update({key : (scores[key] + (self.pop_boost * item_pop))})
          
         
-        # Create things in the format ..
         predictions = np.zeros(len(predict_for_item_ids))
         mask = np.isin( predict_for_item_ids, list(scores.keys()) )
         
@@ -398,14 +371,12 @@ class ContextKNN:
             tuples.append((session, time))
             
         tuples = sorted(tuples, key=itemgetter(1), reverse=True)
-        #print 'sorted list ', sortedList
         cnt = 0
         for element in tuples:
             cnt = cnt + 1
             if cnt > number:
                 break
             sample.add( element[0] )
-        #print 'returning sample of size ', len(sample)
         return sample
         
         
@@ -427,12 +398,12 @@ class ContextKNN:
         
         self.relevant_sessions = self.relevant_sessions | self.sessions_for_item( input_item_id );
                
-        if self.sample_size == 0: #use all session as possible neighbors
+        if self.sample_size == 0:
             
             print('!!!!! runnig KNN without a sample size (check config)')
             return self.relevant_sessions
 
-        else: #sample some sessions
+        else:
                 
             self.relevant_sessions = self.relevant_sessions | self.sessions_for_item( input_item_id );
                          
@@ -464,12 +435,10 @@ class ContextKNN:
         out : list of tuple (session_id,similarity)           
         '''
         
-        #print 'nb of sessions to test ', len(sessionsToTest), ' metric: ', self.metric
         neighbors = []
         cnt = 0
         for session in sessions:
             cnt = cnt + 1
-            # get items of the session, look up the cache first 
             session_items_test = self.items_for_session( session )
             
             similarity = getattr(self , self.similarity)(session_items_test, session_items)
@@ -479,9 +448,6 @@ class ContextKNN:
         return neighbors
 
 
-    #-----------------
-    # Find a set of neighbors, returns a list of tuples (sessionid: similarity) 
-    #-----------------
     def find_neighbors( self, session_items, input_item_id, session_id):
         '''
         Finds the k nearest neighbors for the given session_id and the current item input_item_id. 
@@ -517,11 +483,8 @@ class ContextKNN:
         --------
         out : list of tuple (item, score)           
         '''
-        # now we have the set of relevant items to make predictions
         scores = dict()
-        # iterate over the sessions
         for session in neighbors:
-            # get the items in this session
             items = self.items_for_session( session[0] )
             
             for item in items:

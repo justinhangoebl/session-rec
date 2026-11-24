@@ -39,7 +39,7 @@ class ArtistCoherence:
         '''
         Reset for usage in multiple evaluations
         '''
-        self.session = set() #artist set
+        self.session = set()
         self.session_id = -1
         self.average = 0.0
         self.count = 0.0

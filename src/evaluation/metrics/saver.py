@@ -53,7 +53,6 @@ class Saver:
         result: pandas.Series
             Series of scores with the item id as the index
         '''
-        #only keep the k- first predictions
         recs = result[:self.length]
         self.recommendations['SessionId'].append( session )
         self.recommendations['Position'].append( position )

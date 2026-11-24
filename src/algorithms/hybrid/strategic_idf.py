@@ -1,5 +1,3 @@
-from datetime import datetime as dt
-from datetime import timedelta as td
 import pandas as pd
 import numpy as np
 
@@ -118,7 +116,7 @@ class StrategicHybridSeq:
 
         '''
 
-        if (self.session != session_id):  # new session
+        if (self.session != session_id):
             self.session = session_id
             self.session_items = list()
             self.session_idf = 0

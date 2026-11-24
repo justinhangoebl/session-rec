@@ -92,7 +92,6 @@ def evaluate_sessions(pr, metrics, test_data, train_data, items=None, cut_off=20
                 m.stop_predict( pr )
             
         preds[np.isnan(preds)] = 0
-#         preds += 1e-8 * np.random.rand(len(preds)) #Breaking up ties
         preds.sort_values( ascending=False, inplace=True )
         
         time_sum_clock += time.process_time()-crs
@@ -121,7 +120,6 @@ def evaluate_sessions(pr, metrics, test_data, train_data, items=None, cut_off=20
             count += 1
         
         
-    
     print( 'END evaluation in ', (time.process_time()-sc), 'c / ', (time.time()-st), 's' )
     print( '    avg rt ', (time_sum/time_count), 's / ', (time_sum_clock/time_count), 'c' )
     print( '    time count ', (time_count), 'count/', (time_sum), ' sum' )

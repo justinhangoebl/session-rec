@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from math import log10
 import collections as col
 from datetime import datetime as dt
 from datetime import timedelta as td
@@ -116,12 +115,6 @@ class MarkovModel:
             for key in self.rules[input_item_id]:
                 preds[ predict_for_item_ids == key ] = self.rules[input_item_id][key]
         
-        #test
-#         for i in range(2,4):
-#             if len(self.session_items) >= i :
-#                 item = self.session_items[-i]
-#                 for key in self.rules[ item ]:
-#                     preds[ predict_for_item_ids == key ] += self.rules[item][key] * (1/i)
         
         series = pd.Series(data=preds, index=predict_for_item_ids)
         

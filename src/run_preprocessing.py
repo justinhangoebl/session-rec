@@ -1,119 +1,80 @@
-import time
-
-'''
-preprocessing method ["info","org","days_test","slice"]
-    info: just load and show info
-    org: from gru4rec (last day => test set)
-    org_min_date: from gru4rec (last day => test set) but from a minimal date onwards
-    days_test: adapted from gru4rec (last N days => test set)
-    slice: new (create multiple train-test-combinations with a window approach  
-    buys: load buys and safe file to prepared
-'''
-import sys
-from pathlib import Path
-import yaml
 import importlib
-import traceback
 import os
+import sys
+import traceback
+from pathlib import Path
 
-def main( conf ): 
+import yaml
+
+
+def main(conf):
     '''
-    Execute experiments for the given configuration path
-        --------
-        conf: string
-            Configuration path. Can be a single file or a folder.
-        out: string
-            Output folder path for endless run listening for new configurations. 
+    Run one preprocessing config: load the raw data with preprocessing.<mode>.preprocess_<preprocessor>, filter it
+    and write one train/test split (type single) or several time slices (type window).
     '''
-    print( 'Checking {}'.format( conf ) )
-    
-    file = Path( conf )
+    print('Checking {}'.format(conf))
+
+    file = Path(conf)
     if file.is_file():
-        
-        print( 'Loading file' )
-        stream = open( str(file) )
-        c = yaml.safe_load(stream)
-        stream.close()
-        print( 'processing config ' + conf )
-        
+        print('Loading file')
+        with open(str(file)) as stream:
+            c = yaml.safe_load(stream)
+        print('processing config ' + conf)
+
         try:
-        
-            run_file( c )
-            print( 'finished config ' + conf )
-            
+            run_file(c)
+            print('finished config ' + conf)
         except (KeyboardInterrupt, SystemExit):
-                        
-            print( 'manually aborted config ' + conf )            
+            print('manually aborted config ' + conf)
             raise
-        
         except Exception:
-            print( 'error for config ', file )
+            print('error for config ', file)
             traceback.print_exc()
             sys.exit(1)
-            
+
         exit()
-    
-    print( 'File not found: ' + conf )
-    
-def run_file( conf ):
-    
-    #include preprocessing
-    preprocessor = load_preprocessor( conf )
-    
-    #load data from raw and transform
+
+    print('File not found: ' + conf)
+
+
+def run_file(conf):
+    preprocessor = load_preprocessor(conf)
+
+    raw = conf['data']['folder'] + conf['data']['prefix']
     if 'sample_percentage' in conf['data']:
-        data = preprocessor.load_data(conf['data']['folder'] + conf['data']['prefix'], sample_percentage=conf['data']['sample_percentage'])
-    elif 'raw_quoting' in conf['data']:   # LASTFM: 'none' (every line as written, default) or 'legacy' (the original's lossy parse)
-        data = preprocessor.load_data( conf['data']['folder'] + conf['data']['prefix'], raw_quoting=conf['data']['raw_quoting'] )
+        data = preprocessor.load_data(raw, sample_percentage=conf['data']['sample_percentage'])
     else:
-        data = preprocessor.load_data( conf['data']['folder'] + conf['data']['prefix'] )
+        data = preprocessor.load_data(raw)
     if type(data) == tuple:
-        extra = data[1:]
         data = data[0]
-    # because in session-aware, pre-processing will be applied after data splitting
-    if not(conf['mode'] == 'session_aware' and conf['type'] == 'window'):
-        data = preprocessor.filter_data( data, **conf['filter'] )
+    # session-aware window: the filters run per slice, after splitting
+    if not (conf['mode'] == 'session_aware' and conf['type'] == 'window'):
+        data = preprocessor.filter_data(data, **conf['filter'])
 
-    ensure_dir( conf['output']['folder'] + conf['data']['prefix'] )
-    #call method according to config
+    out = conf['output']['folder'] + conf['data']['prefix']
+    ensure_dir(out)
     if conf['type'] == 'single':
-        preprocessor.split_data( data, conf['output']['folder'] + conf['data']['prefix'], **conf['params']  )
+        preprocessor.split_data(data, out, **conf['params'])
     elif conf['type'] == 'window':
-        preprocessor.slice_data( data, conf['output']['folder'] + conf['data']['prefix'], **conf['params']  )
-    elif conf['type'] == 'retrain':
-        preprocessor.retrain_data(data, conf['output']['folder'] + conf['data']['prefix'], **conf['params'])
+        preprocessor.slice_data(data, out, **conf['params'])
     else:
-        if hasattr(preprocessor, conf['type']):
-            method_to_call = getattr(preprocessor, conf['type'])
-            method_to_call( data, conf['output']['folder'] + conf['data']['prefix'], **conf['params']  )
-        else:
-            print( 'preprocessing type not supported' )
-    
+        print('preprocessing type not supported')
 
-def load_preprocessor( conf ):
-    '''
-    Load the proprocessing module
-        --------
-        conf : conf
-            Just the last part of the path, e.g., evaluation_last
-    '''
-    return importlib.import_module( 'preprocessing.'+conf['mode']+'.preprocess_' + conf['preprocessor'] )
+
+def load_preprocessor(conf):
+    return importlib.import_module('preprocessing.' + conf['mode'] + '.preprocess_' + conf['preprocessor'])
+
 
 def ensure_dir(file_path):
-    '''
-    Create all directories in the file_path if non-existent.
-        --------
-        file_path : string
-            Path to the a file
-    '''
     directory = os.path.dirname(file_path)
     if not os.path.exists(directory):
         os.makedirs(directory)
 
+
 def cli():
     '''Entry point: session-rec-preprocess <preprocess_config.yml>'''
     if len(sys.argv) == 2:
-        main(sys.argv[1])  # for example: conf/preprocess/window/rsc15.yml
+        main(sys.argv[1])
     else:
         print('Preprocessing configuration expected.')
         sys.exit(2)
