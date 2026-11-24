@@ -1,0 +1,41 @@
+[project]
+name = "session-rec"
+version = "0.1.0"
+description = "Session-based and session-aware recommendation: evaluation framework and baselines (port of rn5l/session-rec)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy",
+    "pandas",
+    "scipy",
+    "scikit-learn",
+    "pyyaml",
+    "pympler",
+    "dill",
+    "psutil",
+    "scikit-optimize",
+    "networkx",
+    "numexpr",
+]
+
+[project.optional-dependencies]
+hdf = ["tables", "blosc2<4.16"]  # data.type: hdf configs and the session-aware preprocessors (blosc2 4.16 ships no Linux wheel)
+torch = ["torch"]
+
+[project.scripts]
+session-rec = "run_config:cli"
+session-rec-preprocess = "run_preprocessing:cli"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# Configs load classes by dotted path below these packages (knn.vsknn.VMContextKNN -> algorithms.knn.vsknn...)
+[tool.setuptools]
+package-dir = {"" = "src"}
+py-modules = ["run_config", "run_preprocessing"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["algorithms*", "evaluation*", "preprocessing*"]
+namespaces = true
