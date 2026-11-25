@@ -120,3 +120,6 @@ venv.bak/
 envs/
 
 research-plan/
+/output/
+wandb/
+/saved/

@@ -121,6 +121,9 @@ of one model can run in the same config.
   `torch.no_grad()` and return the scores as a CPU `pandas.Series`.
 * Map item ids to embedding rows in `fit` (`pd.factorize` or a dict) and keep the reverse index for the Series.
 * New dependencies: `uv add <package>` for the core, `uv add --optional torch <package>` for neural-only ones.
+* Weights & Biases: `from evaluation import tracking`, call `tracking.watch(self.model)` after building the torch
+  module and `tracking.log({'train/epoch': e, 'train/loss': loss})` once per epoch (no-ops without an active run).
+  The runner logs the config, data statistics and evaluation metrics itself; see `sasrec/sasrec.py`.
 
 ## 5. Tuning and checking
 

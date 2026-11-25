@@ -1,6 +1,7 @@
 import gc
 import glob
 import importlib
+import logging
 import os
 import random
 import sys
@@ -8,13 +9,18 @@ import time
 import traceback
 from pathlib import Path
 
-import dill
 import numpy as np
 import pandas as pd
 import yaml
 from skopt import Optimizer
 
 import evaluation.loader as dl
+from evaluation import model_store, tracking
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s: %(name)s: %(levelname)s: %(message)s')
+
+# result key -> {'class', 'key', 'params'} of every instantiated algorithm (for the wandb run config)
+SPECS = {}
 
 
 def main(conf, out=None):
@@ -83,6 +89,8 @@ def load_yaml(file):
 
 
 def run_file(conf):
+    if tracking.configure(conf):
+        print('wandb: logging to project', (conf.get('wandb') or {}).get('project', tracking.DEFAULTS['project']))
     if conf['type'] == 'single':
         run_single(conf)
     elif conf['type'] == 'window':
@@ -156,7 +164,8 @@ def run_opt_iteration(conf, algorithms, iteration, globals):
 
     results = {}
     for k, a in algorithms.items():
-        eval_algorithm(train, test, k, a, evaluation, metrics, results, conf, iteration=iteration, out=False)
+        eval_algorithm(train, test, k, a, evaluation, metrics, results, conf, iteration=iteration, out=False,
+                       phase='valid')
 
     write_results_csv(results, conf, iteration=iteration)
 
@@ -240,37 +249,46 @@ def merge_results(globals):
     return merged
 
 
-def eval_algorithm(train, test, key, algorithm, eval, metrics, results, conf, slice=None, iteration=None, out=True):
+def eval_algorithm(train, test, key, algorithm, eval, metrics, results, conf, slice=None, iteration=None, out=True,
+                   phase='test'):
     '''
     Fit one algorithm, evaluate it with the evaluation module eval and store its metric values in results[key].
+    Each call is one wandb run (see evaluation/tracking.py).
     '''
-    ts = time.time()
-    print('fit ', key)
+    tracking.start(conf, key, SPECS.get(key), train, test, slice=slice, phase=phase)
+    try:
+        ts = time.time()
+        print('fit ', key)
 
-    if hasattr(algorithm, 'init'):
-        algorithm.init(train, test, slice=slice)
+        if hasattr(algorithm, 'init'):
+            algorithm.init(train, test, slice=slice)
 
-    for m in metrics:
-        if hasattr(m, 'start'):
-            m.start(algorithm)
+        for m in metrics:
+            if hasattr(m, 'start'):
+                m.start(algorithm)
 
-    algorithm.fit(train, test)
-    print(key, ' time: ', (time.time() - ts))
+        algorithm.fit(train, test)
+        fit_time = time.time() - ts
+        print(key, ' time: ', fit_time)
 
-    if 'results' in conf and 'pickle_models' in conf['results']:
-        try:
-            save_model(key, algorithm, conf)
-        except Exception:
-            print('could not save model for ' + key)
+        if model_store.enabled(conf):
+            pt = model_store.save(conf, key, SPECS.get(key), algorithm, slice=slice, iteration=iteration,
+                                  meta={'fit_time_s': fit_time})
+            if pt is not None:
+                tracking.log_model(pt, conf, SPECS.get(key), key, slice=slice)
 
-    for m in metrics:
-        if hasattr(m, 'start'):
-            m.stop(algorithm)
+        for m in metrics:
+            if hasattr(m, 'start'):
+                m.stop(algorithm)
 
-    results[key] = eval.evaluate_sessions(algorithm, metrics, test, train)
-    if out:
-        write_results_csv({key: results[key]}, conf, extra=key, iteration=iteration)
+        results[key] = eval.evaluate_sessions(algorithm, metrics, test, train)
+        if out:
+            write_results_csv({key: results[key]}, conf, extra=key, iteration=iteration)
+    except BaseException:
+        tracking.finish(failed=True)
+        raise
 
+    tracking.finish(results[key], fit_time=fit_time, phase=phase)
     algorithm.clear()
 
 
@@ -309,16 +327,6 @@ def write_results_csv(results, conf, iteration=None, extra=None):
                             name = export_csv.replace('.csv', '-') + e[0].replace(':', '').replace(' ', '') + '.csv'
                             e[2].to_csv(name, sep=";", index=False)
                 file.write('\n')
-
-
-def save_model(key, algorithm, conf):
-    '''
-    Pickle a fitted algorithm (results.pickle_models) for reuse with filemodel.FileModel.
-    '''
-    file_name = Path(conf['results']['folder'] + '/' + conf['key'] + '_' + conf['data']['name'] + '_' + key + '.pkl')
-    ensure_dir(file_name)
-    with open(file_name, 'wb') as file:
-        dill.dump(algorithm, file)
 
 
 def print_results(res):
@@ -369,8 +377,10 @@ def instantiate(algorithm, params, algorithms):
                 for v in val:
                     kv += '-' + str(v)
                 algorithms[key + kv] = Class(**params)
+                SPECS[key + kv] = {'class': algorithm['class'], 'key': algorithm.get('key'), 'params': dict(params)}
     else:
         algorithms[key] = Class(**params)
+        SPECS[key] = {'class': algorithm['class'], 'key': algorithm.get('key'), 'params': dict(params)}
 
 
 def create_algorithms_dict(entries):
@@ -513,6 +523,7 @@ def ensure_dir(file_path):
 
 def cli():
     '''Entry point: session-rec <config.yml | config_folder> [out_folder]'''
+    sys.stdout.reconfigure(line_buffering=True)  # progress shows up live when the output goes to a log file
     if len(sys.argv) > 1:
         main(sys.argv[1], out=sys.argv[2] if len(sys.argv) > 2 else None)
     else:
