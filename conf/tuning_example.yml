@@ -11,6 +11,9 @@ data:
   opts: {sessions_test: 200}
 results:
   folder: results/tuning/
+wandb:
+  project: session-rec
+  tags: [tuning]
 metrics:
 - class: accuracy.HitRate
   length: [20]

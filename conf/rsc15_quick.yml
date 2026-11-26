@@ -1,4 +1,5 @@
-# Smoke test on the bundled rsc15 sample: a few baselines and one neural model, ~1 minute on a CPU.
+# Smoke test on the bundled rsc15 sample (data/rsc15/prepared/, 100k clicks): a few baselines and two neural models,
+# about a minute on a GPU.
 type: single
 key: quick
 evaluation: evaluation
@@ -9,6 +10,9 @@ data:
   opts: {sessions_test: 200}
 results:
   folder: results/rsc15_quick/
+wandb:
+  project: session-rec
+  tags: [smoke]
 metrics:
 - class: accuracy.HitRate
   length: [5, 20]
@@ -30,5 +34,8 @@ algorithms:
   params: { k: 500, sample_size: 5000, weighting: quadratic, weighting_score: div, idf_weighting: 5 }
   key: vsknn
 - class: narm.narm.NARM
-  params: { epochs: 2, lr: 0.007, hidden_units: 100, factors: 100, seed: 1, device: cpu }
+  params: { epochs: 2, lr: 0.007, hidden_units: 100, factors: 100, seed: 1, device: 'cuda:0' }
   key: narm
+- class: sasrec.sasrec.SASRec
+  params: { n_epochs: 5, max_seq_length: 20, loss: cross-entropy, seed: 1, device: 'cuda:0' }
+  key: sasrec

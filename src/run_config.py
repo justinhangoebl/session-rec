@@ -1,6 +1,7 @@
 import gc
 import glob
 import importlib
+import logging
 import os
 import random
 import sys
@@ -8,13 +9,18 @@ import time
 import traceback
 from pathlib import Path
 
-import dill
 import numpy as np
 import pandas as pd
 import yaml
 from skopt import Optimizer
 
 import evaluation.loader as dl
+from evaluation import candidates, model_store, tracking
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s: %(name)s: %(levelname)s: %(message)s')
+
+# result key -> {'class', 'key', 'params'} of every instantiated algorithm (for the wandb run config)
+SPECS = {}
 
 
 def main(conf, out=None):
@@ -82,7 +88,15 @@ def load_yaml(file):
         return yaml.safe_load(stream)
 
 
+ONLY = None  # --only: algorithm keys to run
+
+
 def run_file(conf):
+    if ONLY:
+        conf['algorithms'] = [a for a in conf['algorithms'] if a.get('key') in ONLY]
+        print('running only', [a.get('key') for a in conf['algorithms']])
+    if tracking.configure(conf):
+        print('wandb: logging to project', (conf.get('wandb') or {}).get('project', tracking.DEFAULTS['project']))
     if conf['type'] == 'single':
         run_single(conf)
     elif conf['type'] == 'window':
@@ -156,7 +170,8 @@ def run_opt_iteration(conf, algorithms, iteration, globals):
 
     results = {}
     for k, a in algorithms.items():
-        eval_algorithm(train, test, k, a, evaluation, metrics, results, conf, iteration=iteration, out=False)
+        eval_algorithm(train, test, k, a, evaluation, metrics, results, conf, iteration=iteration, out=False,
+                       phase='valid')
 
     write_results_csv(results, conf, iteration=iteration)
 
@@ -240,38 +255,90 @@ def merge_results(globals):
     return merged
 
 
-def eval_algorithm(train, test, key, algorithm, eval, metrics, results, conf, slice=None, iteration=None, out=True):
+def eval_algorithm(train, test, key, algorithm, eval, metrics, results, conf, slice=None, iteration=None, out=True,
+                   phase='test'):
     '''
     Fit one algorithm, evaluate it with the evaluation module eval and store its metric values in results[key].
+    Each call is one wandb run (see evaluation/tracking.py).
     '''
-    ts = time.time()
-    print('fit ', key)
+    tracking.start(conf, key, SPECS.get(key), train, test, slice=slice, phase=phase)
+    try:
+        ts = time.time()
+        print('fit ', key)
 
-    if hasattr(algorithm, 'init'):
-        algorithm.init(train, test, slice=slice)
+        if hasattr(algorithm, 'init'):
+            algorithm.init(train, test, slice=slice)
 
-    for m in metrics:
-        if hasattr(m, 'start'):
-            m.start(algorithm)
+        for m in metrics:
+            if hasattr(m, 'start'):
+                m.start(algorithm)
 
-    algorithm.fit(train, test)
-    print(key, ' time: ', (time.time() - ts))
+        algorithm.fit(train, test)
+        fit_time = time.time() - ts
+        print(key, ' time: ', fit_time)
 
-    if 'results' in conf and 'pickle_models' in conf['results']:
-        try:
-            save_model(key, algorithm, conf)
-        except Exception:
-            print('could not save model for ' + key)
+        folder = None
+        if model_store.enabled(conf):
+            folder = model_store.save(conf, key, SPECS.get(key), algorithm, slice=slice, iteration=iteration,
+                                      meta={'fit_time_s': fit_time})
+            tracking.summary({'model_folder': os.path.abspath(folder)})
+            if os.path.exists(os.path.join(folder, 'model.pt')):
+                tracking.log_model(os.path.join(folder, 'model.pt'), conf, SPECS.get(key), key, slice=slice)
 
-    for m in metrics:
-        if hasattr(m, 'start'):
-            m.stop(algorithm)
+        for m in metrics:
+            if hasattr(m, 'start'):
+                m.stop(algorithm)
 
-    results[key] = eval.evaluate_sessions(algorithm, metrics, test, train)
-    if out:
-        write_results_csv({key: results[key]}, conf, extra=key, iteration=iteration)
+        cand_metrics = run_candidates(conf, algorithm, train, key, folder) if phase == 'test' else None
 
+        if eval is not None:
+            results[key] = eval.evaluate_sessions(algorithm, metrics, test, train)
+        else:  # evaluation: none -> the next-item metrics of the candidate pools of the test part
+            report = (conf.get('candidates') or {}).get('report', 'test')
+            results[key] = candidates.results_list((cand_metrics or {}).get(report, {}))
+        if out:
+            write_results_csv({key: results[key]}, conf, extra=key, iteration=iteration)
+    except BaseException:
+        tracking.finish(failed=True)
+        raise
+
+    tracking.finish(results[key], fit_time=fit_time, phase=phase)
     algorithm.clear()
+
+
+def run_candidates(conf, algorithm, train, key, folder):
+    '''
+    Top-N candidate pools of the fitted model on the configured data parts (evaluation/candidates.py), written to
+    <model folder>/candidates/<part>/. Config:
+        candidates:
+          parts: [valid_test, calib, test]   # hdf keys of the data file, in time order
+          k: 200                             # pool size N
+          history: rolling                   # user history of history models: rolling | train
+          report: test                       # with evaluation: none, the part whose metrics are the results
+    '''
+    cand = conf.get('candidates')
+    if not cand:
+        return None
+    if not candidates.supported(algorithm):
+        print('candidates: {} has no score_sessions, skipped'.format(key))
+        return None
+    if folder is None:
+        folder = os.path.join(conf['results']['folder'], 'candidates_' + key)
+    parts = load_parts(conf, cand.get('parts', ['valid_test', 'test']))
+    out = candidates.score_parts(algorithm, parts, train, folder, k=cand.get('k', 200),
+                                 history=cand.get('history', 'rolling'),
+                                 batch_requests=cand.get('batch_requests', 2048))
+    for part, values in out.items():
+        tracking.summary({'{}/{}'.format(part, m): v for m, v in values.items()})
+    return out
+
+
+def load_parts(conf, keys):
+    '''[(key, DataFrame)] of the given hdf keys of the configured data file.'''
+    data = conf['data']
+    assert data.get('type') == 'hdf', 'candidate pools need data.type: hdf'
+    file = os.path.join(data['folder'], data['prefix'] + '.hdf')
+    return [(k, pd.read_hdf(file, key=k)) for k in keys]
 
 
 def write_results_csv(results, conf, iteration=None, extra=None):
@@ -311,16 +378,6 @@ def write_results_csv(results, conf, iteration=None, extra=None):
                 file.write('\n')
 
 
-def save_model(key, algorithm, conf):
-    '''
-    Pickle a fitted algorithm (results.pickle_models) for reuse with filemodel.FileModel.
-    '''
-    file_name = Path(conf['results']['folder'] + '/' + conf['key'] + '_' + conf['data']['name'] + '_' + key + '.pkl')
-    ensure_dir(file_name)
-    with open(file_name, 'wb') as file:
-        dill.dump(algorithm, file)
-
-
 def print_results(res):
     for k, l in res.items():
         for e in l:
@@ -328,6 +385,9 @@ def print_results(res):
 
 
 def load_evaluation(module):
+    '''evaluation: none skips the per-event evaluation (the candidate pools give the metrics).'''
+    if module in (None, 'none', False):
+        return None
     return importlib.import_module('evaluation.' + module)
 
 
@@ -369,8 +429,10 @@ def instantiate(algorithm, params, algorithms):
                 for v in val:
                     kv += '-' + str(v)
                 algorithms[key + kv] = Class(**params)
+                SPECS[key + kv] = {'class': algorithm['class'], 'key': algorithm.get('key'), 'params': dict(params)}
     else:
         algorithms[key] = Class(**params)
+        SPECS[key] = {'class': algorithm['class'], 'key': algorithm.get('key'), 'params': dict(params)}
 
 
 def create_algorithms_dict(entries):
@@ -512,12 +574,18 @@ def ensure_dir(file_path):
 
 
 def cli():
-    '''Entry point: session-rec <config.yml | config_folder> [out_folder]'''
-    if len(sys.argv) > 1:
-        main(sys.argv[1], out=sys.argv[2] if len(sys.argv) > 2 else None)
-    else:
-        print('File or folder expected.')
-        sys.exit(2)
+    '''Entry point: session-rec <config.yml | config_folder> [out_folder] [--only <algorithm key> ...]'''
+    import argparse
+    sys.stdout.reconfigure(line_buffering=True)  # progress shows up live when the output goes to a log file
+    p = argparse.ArgumentParser(prog='session-rec')
+    p.add_argument('conf', help='config file, or a folder to watch for config files')
+    p.add_argument('out', nargs='?', default=None, help='with a folder: move finished configs here')
+    p.add_argument('--only', nargs='+', default=None,
+                   help='run only the algorithms with these keys (e.g. one per GPU in parallel processes)')
+    args = p.parse_args()
+    global ONLY
+    ONLY = args.only
+    main(args.conf, out=args.out)
 
 
 if __name__ == '__main__':

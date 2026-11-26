@@ -9,8 +9,12 @@ data:
   prefix: userid-timestamp-artid-artname-traid-traname
   type: hdf
   slices: 5
+  skip: [0, 1, 2, 3]   # run the last slice only; remove to run all 5
 results:
   folder: results/lastfm/
+wandb:
+  project: session-rec
+  tags: [lastfm, baselines]
 metrics:
 - class: accuracy_multiple.Precision
   length: [3, 5, 10, 15, 20]

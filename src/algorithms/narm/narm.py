@@ -19,6 +19,7 @@ from collections import OrderedDict
 import numpy as np
 import pandas as pd
 import torch
+from evaluation import tracking
 
 
 def hard_sigmoid(x):
@@ -120,6 +121,7 @@ class NARM:
                   batch_size=512, valid_batch_size=512):
         train, valid = self.load_data()                      # (shuffles first, as the original)
         self.model = NARMModel(n_items, dim_proj, hidden_units).to(self.device)
+        tracking.watch(self.model)
         opt = torch.optim.Adam(self.model.parameters(), lr=lrate, betas=(0.9, 0.999), eps=1e-8)
         print('%d train examples' % len(train[0])); print('%d valid examples' % len(valid[0]))
         history_vali, best_p, bad_count, estop = [], None, 0, False
@@ -142,6 +144,8 @@ class NARM:
                 best_p = OrderedDict((k, v.detach().clone()) for k, v in self.model.state_dict().items())
                 print('Best perfomance updated!'); bad_count = 0
             print('Epoch', eidx, 'loss', np.mean(epoch_loss), 'Valid Recall@20:', valid_evaluation[0], '   Valid Mrr@20:', valid_evaluation[1])
+            tracking.log({'train/epoch': eidx + 1, 'train/loss': float(np.mean(epoch_loss)),
+                          'train/valid_recall@20': float(valid_evaluation[0]), 'train/valid_mrr@20': float(valid_evaluation[1])})
             if len(history_vali) > 10 and valid_evaluation[1] <= np.array(history_vali).max():
                 bad_count += 1
                 if bad_count > patience:
@@ -221,6 +225,12 @@ class NARM:
         x, mask, _ = self.prepare_data(x, [0])
         preds = self.model(x, mask, training=False)
         return pd.Series(data=preds[0][1:].cpu().numpy(), index=self.itemmap.index)
+
+    @torch.no_grad()
+    def export(self):
+        '''Item embeddings (Wemb, also used for scoring): row i belongs to item_ids[i] (padding row dropped).'''
+        rows = torch.as_tensor(self.itemmap.values.astype('int64'), device=self.device)
+        return {'item_ids': self.itemmap.index.values, 'item_embeddings': self.model.Wemb[rows].detach().float().cpu()}
 
     def clear(self):
         self.model = None

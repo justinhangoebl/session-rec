@@ -21,6 +21,7 @@ import time
 import numpy as np
 import pandas as pd
 import torch
+from evaluation import tracking
 
 
 class _Sample:
@@ -163,6 +164,7 @@ class Seq2SeqAttNN:
         for s in self.test_samples:
             self.test_by_session.setdefault(s.session_id, s)
         self.model = STAMPModel(pre_embedding, self.edim, self.stddev, self.active).to(self.device)
+        tracking.watch(self.model)
         if not self.emb_up:
             self.model.embe_dict.requires_grad_(False)
         self.opt = TFAdam([p for p in self.model.parameters() if p.requires_grad], lr=self.init_lr,
@@ -205,6 +207,7 @@ class Seq2SeqAttNN:
             if np.isnan(avgc):
                 print('Epoch {}: NaN error!'.format(epoch)); self.error_during_train = True; return
             print('Epoch{}\tloss: {:.6f}\ttime: {}s'.format(epoch, avgc, time.time() - start_time))
+            tracking.log({'train/epoch': epoch + 1, 'train/loss': float(avgc)})
 
     @torch.no_grad()
     def predict_next(self, session_id, input_item_id, predict_for_item_ids=None, skip=False, mode_type='view', timestamp=0):

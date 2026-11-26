@@ -1,0 +1,19 @@
+# RecSys Challenge 2015, 5 time slices (30 days train / 1 day test, shifted by 31 days) as in Ludewig et al. 2021
+# (original session-rec conf/preprocess/session_based/window/rsc15.yml). Raw data: see rsc15.yml.
+type: window
+mode: session_based
+preprocessor: rsc15
+data:
+  folder: data/rsc15/raw/
+  prefix: yoochoose-clicks
+filter:
+  min_item_support: 5
+  min_session_length: 2
+params:
+  days_test: 1
+  days_train: 30
+  num_slices: 5
+  days_offset: 5
+  days_shift: 31
+output:
+  folder: data/rsc15/slices/

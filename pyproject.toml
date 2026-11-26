@@ -16,6 +16,8 @@ dependencies = [
     "scikit-optimize",
     "networkx",
     "numexpr",
+    "wandb>=0.31.2",
+    "pyarrow>=26.0.1",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +27,7 @@ torch = ["torch"]
 [project.scripts]
 session-rec = "run_config:cli"
 session-rec-preprocess = "run_preprocessing:cli"
+session-rec-candidates = "run_candidates:cli"
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -33,7 +36,7 @@ build-backend = "setuptools.build_meta"
 # Configs load classes by dotted path below these packages (knn.vsknn.VMContextKNN -> algorithms.knn.vsknn...)
 [tool.setuptools]
 package-dir = {"" = "src"}
-py-modules = ["run_config", "run_preprocessing"]
+py-modules = ["run_config", "run_preprocessing", "run_candidates"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
