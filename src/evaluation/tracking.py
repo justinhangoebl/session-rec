@@ -83,6 +83,13 @@ def log(data, step=None):
         wandb.log(data, step=step)
 
 
+def summary(values):
+    '''Set run summary values (no-op without an active run).'''
+    if active():
+        for k, v in values.items():
+            wandb.run.summary[k] = v
+
+
 def watch(model, **kwargs):
     '''wandb.watch() a torch module with the configured settings (no-op without an active run).'''
     if not active() or _settings is None or not _settings.get('watch'):

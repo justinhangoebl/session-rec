@@ -20,6 +20,7 @@ import torch
 
 from algorithms.sgnn.utils import Data, prepare_data   # the original numpy utilities, logic unchanged
 from algorithms.stamp.stamp import TFAdam
+from evaluation import tracking
 
 
 def glorot_uniform(fan_in, fan_out):
@@ -113,6 +114,7 @@ class GGNN:
         self.test_data = Data(test_data, sub_graph=True, method='ggnn', shuffle=False)
         self.decay = self.lr_dc_step * len(self.train_data.inputs) / self.batch_size
         self.model = SRGNNModel(self.n_nodes, self.hidden_size, self.out_size, self.step, self.nonhybrid).to(self.device)
+        tracking.watch(self.model)
         opt = TFAdam(self.model.parameters(), lr=self.lr)
         global_step = 0
         for epoch in range(self.epoch_n):
@@ -129,6 +131,7 @@ class GGNN:
                     g['lr'] = self.lr * self.lr_dc ** math.floor(global_step / self.decay)
                 opt.zero_grad(); loss.backward(); opt.step(); global_step += 1
             print('train_loss:\t%.4f\tEpoch:\t%d' % (loss.item(), epoch))
+            tracking.log({'train/epoch': epoch + 1, 'train/last_batch_loss': loss.item()})
         self.model.eval()
         if self.batch_predict:
             # the original computes these scores in its last epoch's test pass (shuffle=False, no dropout)

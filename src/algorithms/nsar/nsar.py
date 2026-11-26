@@ -22,6 +22,7 @@ import pandas as pd
 import torch
 
 from algorithms.stamp.stamp import TFAdam
+from evaluation import tracking
 
 
 def tf_default_init(*shape):
@@ -174,6 +175,7 @@ class NSAR:
         self.user2id = dict(zip(self.userids, range(1, len(self.userids) + 1)))
         self.model = UserGruModel(len(self.user2id), len(self.itemids), self.max_length, self.entity_embedding,
                                   self.context_embedding, self.hidden_units, self.combination).to(self.device)
+        tracking.watch(self.model)
         self.train_loader = DataLoader(self.max_length, self.batch_size)
         self.train_loader.load_data(train_data, self.user2id, self.item2id)
         opt = TFAdam(self.model.parameters(), lr=self.learning_rate)
@@ -190,6 +192,7 @@ class NSAR:
                 if math.isnan(losses[-1]):
                     print('loss is nan'); break
             print('++ Epoch: {} - Loss: {:.5f} - Time: {:.5f} ++'.format(epoch, np.mean(losses), time.time() - start))
+            tracking.log({'train/epoch': epoch + 1, 'train/loss': float(np.mean(losses)), 'train/epoch_time_s': time.time() - start})
         self.model.eval()
         self.test_loader = DataLoader(self.max_length, self.batch_size)
         self.test_loader.load_data(test_data, self.user2id, self.item2id)

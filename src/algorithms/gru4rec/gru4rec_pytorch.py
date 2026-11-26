@@ -8,6 +8,7 @@ from collections import OrderedDict
 import time
 
 from torch.optim import Optimizer
+from evaluation import tracking
 class IndexedAdagradM(Optimizer):
 
     def __init__(self, params, lr=0.05, momentum=0.0, eps=1e-6):
@@ -456,6 +457,7 @@ class GRU4Rec:
         if compatibility_mode: 
             model._reset_weights_to_compatibility_mode()
         self.model = model
+        tracking.watch(self.model)
         opt = IndexedAdagradM(self.model.parameters(), self.learning_rate, self.momentum)
         for epoch in range(self.n_epochs):
             t0 = time.time()
@@ -490,6 +492,7 @@ class GRU4Rec:
             t1 = time.time()
             dt = t1 - t0
             print('Epoch{} --> loss: {:.6f} \t({:.2f}s) \t[{:.2f} mb/s | {:.0f} e/s]'.format(epoch+1, avgc, dt, len(c)/dt, np.sum(cc)/dt))
+            tracking.log({'train/epoch': epoch + 1, 'train/loss': float(avgc), 'train/epoch_time_s': dt})
     def _adjust_hidden(self, n_valid, finished_mask, valid_mask, H):
         if (self.n_sample == 0) and (n_valid < 2):
             return True

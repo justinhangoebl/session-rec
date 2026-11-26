@@ -28,6 +28,7 @@ import torch
 from algorithms.iirnn.utils_ii_rnn import IIRNNDataHandler
 from algorithms.nsar.nsar import tf_default_init
 from algorithms.stamp.stamp import TFAdam
+from evaluation import tracking
 
 
 class TFGRUCell(torch.nn.Module):
@@ -112,6 +113,7 @@ class IIRNN:
                                             self.BATCHSIZE, self.MAX_SESSION_REPRESENTATIONS, self.LT_INTERNALSIZE)
         self.N_ITEMS = self.datahandler.get_num_items()
         self.model = IIRNNModel(self.N_ITEMS, self.EMBEDDING_SIZE, self.LT_INTERNALSIZE, self.ST_INTERNALSIZE).to(self.device)
+        tracking.watch(self.model)
         opt = TFAdam(self.model.parameters(), lr=self.learning_rate)
         for epoch in range(1, self.MAX_EPOCHS + 1):
             start = time.time(); epoch_loss = 0
@@ -129,6 +131,7 @@ class IIRNN:
                     self.datahandler.store_user_session_representations(sess_rep, user_list)
                     xinput, targetvalues, sl, session_reps, sr_sl, user_list = self.datahandler.get_next_train_batch()
             print('Epoch', epoch, 'loss', epoch_loss, 'time %.1fs' % (time.time() - start))
+            tracking.log({'train/epoch': epoch, 'train/loss': float(epoch_loss), 'train/epoch_time_s': time.time() - start})
         self.model.eval()
 
     @torch.no_grad()

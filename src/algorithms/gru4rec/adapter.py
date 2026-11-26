@@ -40,6 +40,9 @@ class GRU4RecTorch:
             raise RuntimeError('GRU4Rec training diverged (NaN loss)')
         self.model = self.gru.model
         self.model.eval()
+        # the negative-sample cache (~80 MB of random item ids) is only needed for training; keep it out of saved models
+        if hasattr(self.gru.data_iterator, 'sample_cache'):
+            del self.gru.data_iterator.sample_cache
         self.itemidmap = self.gru.data_iterator.itemidmap
         self.item_ids = self.itemidmap.index.values
         self.current_session = None
@@ -64,6 +67,53 @@ class GRU4RecTorch:
         if predict_for_item_ids is not None:
             preds = preds[preds.index.isin(predict_for_item_ids)]
         return preds
+
+    @torch.no_grad()
+    def export(self):
+        '''Item embeddings: row i belongs to item_ids[i]. item_embeddings is the output embedding Wy (also the input
+        embedding with constrained_embedding); input_item_embeddings the separate input embedding E, if any.'''
+        rows = torch.as_tensor(self.itemidmap.values.astype('int64'), device=self.device)
+        out = {'item_ids': self.itemidmap.index.values,
+               'item_embeddings': self.model.Wy.weight[rows].detach().float().cpu(),
+               'item_bias': self.model.By.weight[rows, 0].detach().float().cpu()}
+        if getattr(self.model, 'embedding', 0) and not self.model.constrained_embedding:
+            out['input_item_embeddings'] = self.model.E.weight[rows].detach().float().cpu()
+        return out
+
+    # ---------------------------------------------------------------- candidate pools (evaluation/candidates.py)
+
+    candidate_batch_requests = 200000  # many sessions per batch: the GRU steps through them in parallel
+
+    def candidate_item_ids(self):
+        ids = np.empty(len(self.itemidmap), dtype=self.itemidmap.index.dtype)
+        ids[self.itemidmap.values.astype(np.int64)] = self.itemidmap.index.values
+        return ids
+
+    @torch.no_grad()
+    def score_sessions(self, sessions, histories=None, chunk=4096):
+        '''Scores after every prefix of every session (column indices, -1 = unknown item: the state is kept).'''
+        self.model.eval()
+        lens = np.array([len(s) for s in sessions])
+        offsets = np.r_[0, np.cumsum(lens - 1)][:-1]
+        order = np.argsort(-lens, kind='stable')  # longest first: the active sessions of step t are a prefix
+        lens_o, off_o = lens[order], offsets[order]
+        L = int(lens.max()) if len(lens) else 0
+        X = np.full((len(sessions), max(L, 1)), -1, dtype=np.int64)
+        for r, si in enumerate(order):
+            X[r, :lens[si]] = sessions[si]
+        X = torch.as_tensor(X, device=self.device)
+        for c in range(0, len(order), chunk):  # independent groups of sessions
+            sl = slice(c, c + chunk)
+            H = [torch.zeros((len(lens_o[sl]), size), device=self.device) for size in self.gru.layers]
+            for t in range(int(lens_o[sl].max()) - 1):
+                na = int((lens_o[sl] > t + 1).sum())
+                x = X[c:c + na, t]
+                valid = (x >= 0).unsqueeze(1)
+                old = [h[:na] for h in H]
+                Hn = [h.clone() for h in old]
+                scores = self.model.forward(x.clamp(min=0), Hn, None, training=False)
+                H = [torch.where(valid, hn, ho) for hn, ho in zip(Hn, old)]
+                yield off_o[c:c + na] + t, scores
 
     def clear(self):
         self.model = None

@@ -1,0 +1,44 @@
+# Backbones for the Sinkhorn kill test (research plan sections 4.1, 5) on LASTFM with the global temporal split
+# (conf/preprocess/lastfm_temporal.yml): trained on T0, evaluated on T2 (test). The saved models
+# (results/lastfm_temporal/models/backbones_lastfm-temporal/) score T1 for calibration / OT and T2 for serving.
+# One seed, untuned params (EASE: first guess; SASRec: defaults; GRU4Rec: Latifi et al. 2021 LASTFM params).
+type: single
+key: backbones
+evaluation: evaluation_user_based
+data:
+  name: lastfm-temporal
+  folder: data/lastfm/temporal/
+  prefix: userid-timestamp-artid-artname-traid-traname
+  type: hdf
+results:
+  folder: results/lastfm_temporal/
+wandb:
+  project: session-rec
+  tags: [lastfm, temporal, backbones, killtest]
+  watch: {log: gradients, log_freq: 500}
+metrics:
+- class: accuracy_multiple.NDCG
+  length: [1, 5, 10, 20]
+- class: accuracy_multiple.Recall
+  length: [1, 5, 10, 20]
+- class: accuracy.HitRate
+  length: [1, 5, 10, 20]
+- class: accuracy.MRR
+  length: [5, 10, 20]
+- class: coverage.Coverage
+  length: [20]
+- class: popularity.Popularity
+  length: [20]
+- class: time_memory_usage.Time_usage_training
+- class: time_memory_usage.Time_usage_testing
+algorithms:
+- class: ease.ease.EASE
+  params: { l2: 500, use_history: true, history_weight: 1.0, recency_decay: 0.5, device: 'cuda:0' }
+  key: ease
+- class: sasrec.sasrec.SASRec
+  # sessions have 5-200 plays (median ~13); training cuts longer ones into windows, prediction uses the last 50
+  params: { hidden_units: 50, max_seq_length: 50, num_blocks: 2, num_heads: 1, dropout_rate: 0.2, batch_size: 128, learning_rate: 0.001, l2_emb: 0.0, n_epochs: 90, loss: cross-entropy, seed: 1, device: 'cuda:0' }
+  key: sasrec
+- class: gru4rec.adapter.GRU4RecTorch
+  params: { loss: bpr-max, elu_param: 0, layers: [100], n_epochs: 10, batch_size: 100, dropout_p_embed: 0.0, dropout_p_hidden: 0.0, learning_rate: 0.04, momentum: 0.1, n_sample: 2048, sample_alpha: 0.75, bpreg: 1.0, logq: 0.0, embedding: 0, constrained_embedding: false, seed: 1, device: 'cuda:0' }
+  key: gru4rec

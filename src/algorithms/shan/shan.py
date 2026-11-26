@@ -11,7 +11,7 @@ Reproduced exactly (they change results), including the original's quirks:
   * plain SGD lr 0.1, batch size 1, records in fixed order, `iter` epochs
   * predict_next: current session = test session[:position] (empty at the first event, as the original),
     long-term part = all training items of the user
-Extra parameters: seed (numpy, python random, torch), device (default cpu: batch size 1 is faster there).
+Extra parameters: seed (numpy, python random, torch), device (default cuda if available; 1 epoch on LASTFM slice 0: 117s GPU / 137s CPU).
 """
 import copy
 import datetime
@@ -21,6 +21,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
+from evaluation import tracking
 
 
 class _DataGeneration:
@@ -116,12 +117,12 @@ class SHANModel(torch.nn.Module):
 
 class SHAN:
     def __init__(self, iter=100, global_dimension=50, neg_number=10, lambda_a=0.01, lambda_uv=0.01,
-                 session_key='SessionId', item_key='ItemId', user_key='UserId', time_key='Time', seed=None, device='cpu'):
+                 session_key='SessionId', item_key='ItemId', user_key='UserId', time_key='Time', seed=None, device=None):
         self.lambda_u_v, self.lambda_a, self.iter = lambda_uv, lambda_a, iter
         self.global_dimensions, self.neg_number = global_dimension, neg_number
         self.session_key, self.item_key, self.time_key, self.user_key = session_key, item_key, time_key, user_key
         self.seed = seed
-        self.device = torch.device(device)
+        self.device = torch.device(device if device is not None else ('cuda:0' if torch.cuda.is_available() else 'cpu'))
         self.current_session_test = -1
 
     def fit(self, train_data, test_data=None):
@@ -130,6 +131,7 @@ class SHAN:
         data_key = dict(item_key=self.item_key, time_key=self.time_key, user_key=self.user_key, session_key=self.session_key)
         self.dg = _DataGeneration(train_data, test_data, self.neg_number, data_key)
         self.model = SHANModel(self.dg.user_number, self.dg.item_number, self.global_dimensions).to(self.device)
+        tracking.watch(self.model)
         opt = torch.optim.SGD(self.model.parameters(), lr=0.1)
         l2 = lambda t: (t ** 2).sum() / 2
         dev = self.device
@@ -153,6 +155,7 @@ class SHAN:
                 opt.zero_grad(set_to_none=True); loss.backward(); opt.step()
                 all_loss += loss.item()
             print('loss = ' + str(all_loss))
+            tracking.log({'train/epoch': it + 1, 'train/loss': float(all_loss)})
         self.model.eval()
         self.all_items = torch.arange(self.dg.item_number, device=dev)
         self.index_all = [self.dg.id2item[x] for x in range(self.dg.item_number)]

@@ -1,0 +1,42 @@
+# Backbones for the Sinkhorn kill test (research plan sections 3-5) on Yambda-50M with the global temporal split
+# (conf/preprocess/yambda50m.yml): trained on T0, then frozen; candidate pools (top-200 items + logits per session
+# prefix) on T1a (valid_test), T1b (calib) and T2 (test), written to saved/<algo>-yambda50m-<date>-backbones/candidates/.
+# evaluation: none -> no per-event session-rec loop (hours on 1.2M test events); the metrics come from the pools
+# (next-item HitRate / MRR / NDCG @ 1-20 per part; results csv and wandb summary report T2).
+# One seed, untuned params. One GPU per backbone in parallel:
+#   CUDA_VISIBLE_DEVICES=0 session-rec conf/yambda50m_temporal.yml --only ease
+#   CUDA_VISIBLE_DEVICES=2 session-rec conf/yambda50m_temporal.yml --only sasrec
+#   CUDA_VISIBLE_DEVICES=3 session-rec conf/yambda50m_temporal.yml --only gru4rec
+type: single
+key: backbones
+evaluation: none
+data:
+  name: yambda50m
+  folder: data/yambda/temporal/
+  prefix: listens
+  type: hdf
+results:
+  folder: results/yambda50m_temporal/
+candidates:
+  parts: [valid_test, calib, test]   # T1a, T1b, T2 in time order
+  k: 200
+  history: rolling                   # EASE's user history: all of the user's listens before the session
+  report: test
+wandb:
+  project: session-rec
+  tags: [yambda50m, temporal, backbones, killtest]
+  watch: {log: gradients, log_freq: 1000}
+metrics: []
+algorithms:
+- class: ease.ease.EASE
+  # 157k T0 items do not fit as a dense item x item matrix: the 80k most played (2 x 25.6 GB during the fit)
+  params: { l2: 500, max_items: 80000, use_history: true, history_weight: 1.0, recency_decay: 0.5, device: 'cuda:0' }
+  key: ease
+- class: sasrec.sasrec.SASRec
+  # sessions have 5-200 listens (median ~13); training cuts longer ones into windows, prediction uses the last 50
+  params: { hidden_units: 64, max_seq_length: 50, num_blocks: 2, num_heads: 1, dropout_rate: 0.2, batch_size: 256, learning_rate: 0.001, l2_emb: 0.0, n_epochs: 10, loss: cross-entropy, seed: 1, device: 'cuda:0' }
+  key: sasrec
+- class: gru4rec.adapter.GRU4RecTorch
+  # official GRU4Rec cross-entropy params for RSC15 (conf/rsc15_neural.yml)
+  params: { loss: cross-entropy, constrained_embedding: true, embedding: 0, elu_param: 0, layers: [480], n_epochs: 10, batch_size: 48, dropout_p_embed: 0.0, dropout_p_hidden: 0.2, learning_rate: 0.07, momentum: 0.0, n_sample: 2048, sample_alpha: 0.2, bpreg: 0.0, logq: 1.0, seed: 1, device: 'cuda:0' }
+  key: gru4rec

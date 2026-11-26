@@ -1,57 +1,67 @@
 '''
-Saving the fitted models. The runner calls save() for every algorithm on every split / slice, right after fit:
+Saving the fitted models. The runner calls save() for every algorithm on every split / slice, right after fit.
+Each model gets its own folder:
 
-    <results.folder>/models/<config key>_<data name>/<algorithm key>[.<slice>].pkl   the fitted object (dill), for
-        reuse with filemodel.FileModel or dill.load(...).predict_next(...)
-    <results.folder>/models/<config key>_<data name>/<algorithm key>[.<slice>].pt    torch.load-able dict:
-        meta        config key, data, slice, class, key, result key, params, git commit
-        state_dict  of the model's torch module, if it has one (on cpu)
-        export      algorithm.export(), if it has one: item_ids (original ItemIds) and item_embeddings
-                    [n_items, d] with row i <-> item_ids[i], plus model specific extras
+    saved/<algorithm key>-<data name>-<YYYYMMDD-HHMM>-<config key>[-s<slice>]/
+        model.pkl     the fitted object (dill), for dill.load(...).predict_next(...) / filemodel.FileModel
+        model.pt      torch.load-able dict:
+                          meta        config key, data, slice, class, key, result key, params, git commit, fit time
+                          state_dict  of the model's torch module, if it has one (on cpu)
+                          export      algorithm.export(), if it has one: item_ids (original ItemIds) and
+                                      item_embeddings [n_items, d] with row i <-> item_ids[i], plus model extras
+        meta.json     the meta dict (readable without torch)
+        candidates/   top-N candidate pools per data part, if the config asks for them (evaluation/candidates.py)
 
-Algorithms with pickle_model = False (EASE) only get the .pt file; their class rebuilds them from it (EASE.load).
+e.g. saved/gru4rec-yambda50m-20261125-1830-backbones/. Algorithms with pickle_model = False (EASE) only get model.pt;
+their class rebuilds them from it (EASE.load).
 
-Config (results section): save_models: false turns saving off; pickle_models: <folder> (the original session-rec
-option) sets the folder instead of <results.folder>/models/. The .pt file is also logged to wandb as a model
-artifact (wandb.log_model: false turns that off).
+Config (results section): save_models: false turns saving off; save_folder: <folder> sets the base folder
+(default saved/). The model.pt file is also logged to wandb as a model artifact (wandb.log_model: false turns that off).
 
 Loading:
-    ckpt = torch.load(path, weights_only=False)
+    ckpt = torch.load('saved/.../model.pt', weights_only=False)
     E, ids = ckpt['export']['item_embeddings'], ckpt['export']['item_ids']
+    model = load('saved/...')    # the fitted object (model.pkl, or EASE.load for EASE)
 '''
+import json
 import os
+import time
 import traceback
 
 import dill
 import torch
 
-from evaluation.tracking import _plain
+from evaluation.tracking import _plain, _git_commit
 
-_written = {}
+_written = set()
 
 
 def enabled(conf):
     return conf.get('results', {}).get('save_models', True) is not False
 
 
-def folder(conf):
-    results = conf.get('results', {})
-    base = results.get('pickle_models')
-    if not isinstance(base, str):
-        base = os.path.join(results.get('folder', 'results/'), 'models')
-    return os.path.join(base, '{}_{}'.format(conf['key'], conf['data']['name']))
+def base_folder(conf):
+    return conf.get('results', {}).get('save_folder', 'saved/')
 
 
-def file_stem(conf, key, spec, iteration=None):
-    '''<short key>[.<iteration>]; a numbered suffix if another result key of this run already used the name.'''
-    short = (spec or {}).get('key') or key
-    stem = short + ('.{}'.format(iteration) if iteration is not None else '')
-    path = os.path.join(folder(conf), stem)
+def _clean(name):
+    return ''.join(c if c.isalnum() or c in '_.' else '' for c in str(name).replace('-', '')).lower() or 'x'
+
+
+def model_folder(conf, key, spec, slice=None, iteration=None):
+    '''saved/<algo>-<data>-<date>-<config key>[-s<slice>]; a numbered suffix if the folder already exists.'''
+    algo = _clean((spec or {}).get('key') or key)
+    name = '{}-{}-{}-{}'.format(algo, _clean(conf['data']['name']), time.strftime('%Y%m%d-%H%M'), _clean(conf['key']))
+    if slice is not None:
+        name += '-s{}'.format(slice)
+    elif iteration is not None:
+        name += '-i{}'.format(iteration)
+    path = os.path.join(base_folder(conf), name)
     n = 1
-    while _written.get(path, key) != key:
+    while path in _written or os.path.exists(path):
         n += 1
-        path = os.path.join(folder(conf), '{}-{}'.format(stem, n))
-    _written[path] = key
+        path = os.path.join(base_folder(conf), '{}-{}'.format(name, n))
+    _written.add(path)
     return path
 
 
@@ -67,15 +77,17 @@ def find_module(algorithm):
 
 
 def save(conf, key, spec, algorithm, slice=None, iteration=None, meta=None):
-    '''Write the .pkl and .pt files of a fitted algorithm; returns the .pt path (None if it has no torch module).'''
-    stem = file_stem(conf, key, spec, iteration)
-    os.makedirs(os.path.dirname(stem), exist_ok=True)
+    '''Write model.pkl / model.pt / meta.json of a fitted algorithm; returns its folder.'''
+    folder = model_folder(conf, key, spec, slice, iteration)
+    os.makedirs(folder, exist_ok=True)
+    info = {'config_key': conf['key'], 'data': conf['data'], 'slice': slice, 'iteration': iteration,
+            'result_key': key, 'saved': time.strftime('%Y-%m-%d %H:%M:%S'), 'git_commit': _git_commit(),
+            **_plain(spec or {}), **_plain(meta or {})}
 
     if getattr(algorithm, 'pickle_model', True):  # e.g. EASE: its .pt export already is the whole model
         try:
-            with open(stem + '.pkl', 'wb') as f:
+            with open(os.path.join(folder, 'model.pkl'), 'wb') as f:
                 dill.dump(algorithm, f)
-            print('saved model', stem + '.pkl')
         except Exception:
             print('WARNING: could not pickle model ' + key)
             traceback.print_exc()
@@ -88,15 +100,26 @@ def save(conf, key, spec, algorithm, slice=None, iteration=None, meta=None):
         except Exception:
             print('WARNING: export() failed for ' + key)
             traceback.print_exc()
-    if module is None and exported is None:
-        return None
+    if module is not None or exported is not None:
+        torch.save({'meta': info,
+                    'state_dict': {k: v.detach().cpu() for k, v in module.state_dict().items()}
+                    if module is not None else None,
+                    'export': exported}, os.path.join(folder, 'model.pt'))
+    with open(os.path.join(folder, 'meta.json'), 'w') as f:
+        json.dump(info, f, indent=1, default=str)
+    print('saved model', folder)
+    return folder
 
-    ckpt = {
-        'meta': {'config_key': conf['key'], 'data': conf['data'], 'slice': slice, 'result_key': key,
-                 **_plain(spec or {}), **(meta or {})},
-        'state_dict': {k: v.detach().cpu() for k, v in module.state_dict().items()} if module is not None else None,
-        'export': exported,
-    }
-    torch.save(ckpt, stem + '.pt')
-    print('saved model', stem + '.pt')
-    return stem + '.pt'
+
+def load(folder, device=None):
+    '''The fitted algorithm saved in folder: model.pkl, or the class' load(model.pt) (EASE).'''
+    pkl, pt = os.path.join(folder, 'model.pkl'), os.path.join(folder, 'model.pt')
+    if os.path.exists(pkl):
+        with open(pkl, 'rb') as f:
+            model = dill.load(f)
+        if device is not None and hasattr(model, 'to'):
+            model.to(device)
+        return model
+    meta = json.load(open(os.path.join(folder, 'meta.json')))
+    from run_config import load_class
+    return load_class('algorithms.' + meta['class']).load(pt, device=device)

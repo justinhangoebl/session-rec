@@ -1,0 +1,22 @@
+# LASTFM 1K, session-aware, one global temporal split (research plan section 3): 180 days up to 2009-05-01,
+# T0 (train, first 80% of the timeline) | T1 (valid_test, 10%) | T2 (test, last 10%), by session start.
+# Raw data: data/lastfm/raw/userid-timestamp-artid-artname-traid-traname.tsv (see lastfm.yml).
+type: single
+mode: session_aware
+preprocessor: lastfm_temporal
+data:
+  folder: data/lastfm/raw/
+  prefix: userid-timestamp-artid-artname-traid-traname
+filter:
+  end: '2009-05-01'         # the crawl fades out after April 2009 (May: 1/4 of the sessions, June: 1/10)
+  days: 180
+  min_item_support: 10
+  min_session_length: 5      # plan: drop sessions with fewer than 5 plays
+  max_session_length: 200    # ~p99.5; longer "sessions" are mostly radio / scrobbler artefacts
+  min_user_sessions: 3
+params:
+  t1_share: 0.1
+  t2_share: 0.1
+  min_session_length: 5
+output:
+  folder: data/lastfm/temporal/

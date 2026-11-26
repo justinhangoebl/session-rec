@@ -23,6 +23,7 @@ import pandas as pd
 import torch
 
 from algorithms.stamp.stamp import TFAdam
+from evaluation import tracking
 
 
 def keras_glorot(*shape):
@@ -158,6 +159,7 @@ class NCFS:
         self.nb_trn_spl = sum(len(v[i]) for v in self.sessionSet.values() for i in range(1, len(v)))
         self.nb_batch = math.ceil(self.nb_trn_spl / self.mini_batch_sz)
         self.model = CrossSessModel(self.nb_item, self.embeding_len, self.max_nb_his_sess, self.att_alpha).to(self.device)
+        tracking.watch(self.model)
         self.opt = TFAdam(self.model.parameters(), lr=0.001, eps=1e-7)
 
     def _train_on_batch(self, sess_input, his_input, target_input):
@@ -204,6 +206,7 @@ class NCFS:
                             target_input = np.zeros([batch_sz, K + 1], dtype=np.int32)
             spl_cnt = 0
             print('epoch %d loss %g' % (ep, np.mean(losses)))
+            tracking.log({'train/epoch': ep + 1, 'train/loss': float(np.mean(losses))})
         self.model.eval()
         self.all_items = torch.arange(0, self.nb_item + 1, device=self.device)[None]
         self.predicted_item_ids = [int(self.reversed_item_dict[idx]) for idx in range(1, self.nb_item + 1)]

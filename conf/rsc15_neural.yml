@@ -1,0 +1,43 @@
+# EASE and the neural models on RSC15 (YOOCHOOSE clicks), 5 slices as in Ludewig et al. 2021. Data: conf/preprocess/rsc15_window.yml.
+# SASRec params are untuned defaults; NARM uses the tuned params of the original session-rec rsc15 window config;
+# GRU4Rec the official GRU4Rec rsc15 cross-entropy setting.
+type: window
+key: neural
+evaluation: evaluation
+data:
+  name: rsc15
+  folder: data/rsc15/slices/
+  prefix: yoochoose-clicks
+  slices: 5
+  skip: [0, 1, 2, 3]   # run the last slice only; remove to run all 5
+  # opts: {sessions_test: 2000}      # evaluate on the first N test sessions only (quick runs)
+results:
+  folder: results/rsc15/
+wandb:
+  project: session-rec
+  tags: [rsc15, neural]
+  watch: {log: gradients, log_freq: 500}
+metrics:
+- class: accuracy.HitRate
+  length: [1, 3, 5, 10, 15, 20]
+- class: accuracy.MRR
+  length: [3, 5, 10, 15, 20]
+- class: coverage.Coverage
+  length: [20]
+- class: popularity.Popularity
+  length: [20]
+- class: time_memory_usage.Time_usage_training
+- class: time_memory_usage.Time_usage_testing
+algorithms:
+- class: ease.ease.EASE
+  params: { l2: 500, recency_decay: 0.5, device: 'cuda:0' }
+  key: ease
+- class: sasrec.sasrec.SASRec
+  params: { hidden_units: 100, max_seq_length: 50, num_blocks: 2, num_heads: 1, dropout_rate: 0.2, batch_size: 512, learning_rate: 0.001, l2_emb: 0.0, n_epochs: 20, loss: cross-entropy, seed: 1, device: 'cuda:0' }
+  key: sasrec
+- class: gru4rec.adapter.GRU4RecTorch
+  params: { loss: cross-entropy, constrained_embedding: true, embedding: 0, elu_param: 0, layers: [480], n_epochs: 10, batch_size: 48, dropout_p_embed: 0.0, dropout_p_hidden: 0.2, learning_rate: 0.07, momentum: 0.0, n_sample: 2048, sample_alpha: 0.2, bpreg: 0.0, logq: 1.0, seed: 1, device: 'cuda:0' }
+  key: gru4rec
+- class: narm.narm.NARM
+  params: { epochs: 20, lr: 0.0008, seed: 1, device: 'cuda:0' }
+  key: narm

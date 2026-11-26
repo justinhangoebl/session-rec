@@ -119,7 +119,7 @@ constructor `params`.
 | Hybrids | `hybrid.weighted.WeightedHybrid`, `hybrid.mixed.MixedHybrid`, `hybrid.cascading.CascadingHybrid`, `hybrid.strategic*` |
 | Session-aware non-neural | `baselines.usr.USequentialRules`, `knn.uvsknn.UVMContextKNN`, `knn.ustan.USTAN`, `knn.uvstan.U_VSKNN_STAN` (extend / boost / remind extensions) |
 | Neural, session-based | `gru4rec.adapter.GRU4RecTorch`, `narm.narm.NARM`, `stamp.stamp.Seq2SeqAttNN`, `sgnn.gnn.GGNN`, `sasrec.sasrec.SASRec` |
-| Neural, session-aware | `hgru4rec.hgru4rec.HGRU4Rec`, `iirnn.ii_rnn.IIRNN`, `ncfs.ncfs.NCFS`, `nsar.nsar.NSAR`, `shan.shan.SHAN`, `narm.unarm.UNARM`, `gru4rec.ugru4rec.UGRU4RecTorch` |
+| Neural, session-aware | `sasrec.sasrec.SASRec` (`sequence: user`), `sasrec.tisasrec.TiSASRec` (time-interval aware; `interval: linear` as in the paper or `log`), `hgru4rec.hgru4rec.HGRU4Rec`, `iirnn.ii_rnn.IIRNN`, `ncfs.ncfs.NCFS`, `nsar.nsar.NSAR`, `shan.shan.SHAN`, `narm.unarm.UNARM`, `gru4rec.ugru4rec.UGRU4RecTorch` |
 | Precomputed | `filemodel.filemodel.FileModel` (pickled model), `filemodel.resultfile.ResultFile` (recommendation lists) |
 
 Adding a model: [docs/adding-a-model.md](docs/adding-a-model.md).

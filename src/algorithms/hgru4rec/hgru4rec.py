@@ -13,7 +13,7 @@ Reproduced exactly (they change results):
   * optimizer: adagrad scaling g / sqrt(acc + 1e-6) then momentum; sampled rows (Ws_in[0][X], Wsy[Y], By[Y]) use
     set_subtensor for accumulators / velocities (last duplicate wins) and inc_subtensor for the parameters
   * user-parallel mini-batching (iterate) copied verbatim
-Extra parameters: device (default cpu: batch_size 5 is faster there), torch_seed (dropout RNG). `seed` seeds the
+Extra parameters: device (default cuda if available; 1 epoch on LASTFM slice 0: 27s GPU / 40s CPU), torch_seed (dropout RNG). `seed` seeds the
 init RandomState exactly as the original (default 42, so the initial weights are identical to the original's).
 """
 import logging
@@ -21,6 +21,7 @@ import logging
 import numpy as np
 import pandas as pd
 import torch
+from evaluation import tracking
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ class HGRU4Rec:
                  final_act=None, train_random_order=False, lmbd=0.0, session_key='SessionId', item_key='ItemId',
                  time_key='Time', user_key='UserId', n_sample=0, sample_alpha=0.75, item_embedding=None,
                  init_item_embeddings=None, user_propagation_mode='init', user_to_output=False,
-                 user_to_session_act='tanh', seed=42, torch_seed=None, device='cpu'):
+                 user_to_session_act='tanh', seed=42, torch_seed=None, device=None):
         assert adapt == 'adagrad' and grad_cap == 0 and n_sample == 0 and item_embedding is None and not user_to_output, \
             'only the configuration space used by session-rec is ported'
         self.session_layers, self.user_layers = int(session_layers), int(user_layers)
@@ -46,7 +47,7 @@ class HGRU4Rec:
         self.s_init_act = torch.relu if user_to_session_act == 'relu' else torch.tanh
         self.seed, self.torch_seed = seed, torch_seed
         self.rng = np.random.RandomState(seed=seed)
-        self.device = torch.device(device)
+        self.device = torch.device(device if device is not None else ('cuda:0' if torch.cuda.is_available() else 'cpu'))
 
     def init_matrix(self, shape):
         sigma = self.sigma if self.sigma != 0 else np.sqrt(6.0 / (shape[0] + shape[1]))
@@ -212,6 +213,7 @@ class HGRU4Rec:
                 return
             logger.info('Epoch {} - train cost: {:.4f}'.format(epoch, train_cost))
             print('Epoch {} - train cost: {:.4f}'.format(epoch, train_cost))
+            tracking.log({'train/epoch': epoch + 1, 'train/loss': float(train_cost)})
 
     def iterate(self, data, offset_sessions, user_indptr):
         self.reset_states(self.batch_size)

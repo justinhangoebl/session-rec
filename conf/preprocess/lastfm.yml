@@ -1,5 +1,6 @@
 # LASTFM 1K (http://ocelma.net/MusicRecommendationDataset/lastfm-1K.html), session-aware, 5 slices as in
-# Latifi et al. 2021. Put userid-timestamp-artid-artname-traid-traname.tsv into data/lastfm/raw/.
+# Latifi et al. 2021. Put userid-timestamp-artid-artname-traid-traname.tsv (from lastfm-dataset-1K.tar.gz) into
+# data/lastfm/raw/.
 type: window
 mode: session_aware
 preprocessor: lastfm_aware

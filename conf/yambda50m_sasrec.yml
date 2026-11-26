@@ -1,0 +1,40 @@
+# SASRec variants on the Yambda-50M temporal split (conf/yambda50m_temporal.yml): larger embeddings than the first
+# run (64 -> 256; the 64-dim model's loss stalled after 2 epochs at 157k items), session vs. user sequences.
+# Selection on T1a (valid_test); candidate pools for T1a / T1b / T2 as in conf/yambda50m_temporal.yml.
+#   CUDA_VISIBLE_DEVICES=3 session-rec conf/yambda50m_sasrec.yml --only sasrec_s256
+#   CUDA_VISIBLE_DEVICES=3 session-rec conf/yambda50m_sasrec.yml --only sasrec_u256
+#   CUDA_VISIBLE_DEVICES=3 session-rec conf/yambda50m_sasrec.yml --only tisasrec_u256
+type: single
+key: sasrec
+evaluation: none
+data:
+  name: yambda50m
+  folder: data/yambda/temporal/
+  prefix: listens
+  type: hdf
+results:
+  folder: results/yambda50m_temporal/
+candidates:
+  parts: [valid_test, calib, test]
+  k: 200
+  history: rolling
+  report: valid_test                 # selection metric; T2 stays in the pools / summary
+wandb:
+  project: session-rec
+  tags: [yambda50m, temporal, sasrec]
+  watch: {log: gradients, log_freq: 1000}
+metrics: []
+algorithms:
+- class: sasrec.sasrec.SASRec
+  # session sequences (as the backbone run), 256-dim
+  params: { sequence: session, hidden_units: 256, max_seq_length: 50, num_blocks: 2, num_heads: 2, dropout_rate: 0.1, batch_size: 256, learning_rate: 0.001, l2_emb: 0.0, n_epochs: 20, loss: cross-entropy, seed: 1, device: 'cuda:0' }
+  key: sasrec_s256
+- class: sasrec.sasrec.SASRec
+  # user sequences: the user's latest 200 listens (across sessions) + the session prefix
+  params: { sequence: user, hidden_units: 256, max_seq_length: 200, num_blocks: 2, num_heads: 2, dropout_rate: 0.1, batch_size: 64, learning_rate: 0.001, l2_emb: 0.0, n_epochs: 20, loss: cross-entropy, seed: 1, device: 'cuda:0' }
+  key: sasrec_u256
+- class: sasrec.tisasrec.TiSASRec
+  # TiSASRec on user sequences; log interval buckets (8 per doubling of the gap / the user's smallest gap): linear
+  # buckets of the paper saturate after ~20 min at Yambda's 5 s resolution, the gaps between sessions span days
+  params: { sequence: user, interval: log, log_resolution: 8, time_span: 256, time_scale: user, hidden_units: 256, max_seq_length: 200, num_blocks: 2, num_heads: 2, dropout_rate: 0.1, batch_size: 64, learning_rate: 0.001, l2_emb: 0.0, n_epochs: 20, loss: cross-entropy, seed: 1, device: 'cuda:0' }
+  key: tisasrec_u256

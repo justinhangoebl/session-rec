@@ -1,9 +1,13 @@
+# RecSys Challenge 2015 (YOOCHOOSE clicks), one split: the last day is the test set (as in session-rec / GRU4Rec).
+# Raw data (official archive, 287 MB):
+#   mkdir -p data/rsc15/raw && cd data/rsc15/raw
+#   curl -LO https://s3-eu-west-1.amazonaws.com/yc-rdata/yoochoose-data.7z && 7za e yoochoose-data.7z yoochoose-clicks.dat
 type: single
 mode: session_based
 preprocessor: rsc15
 data:
   folder: data/rsc15/raw/
-  prefix: rsc15-clicks
+  prefix: yoochoose-clicks
 filter:
   min_item_support: 5
   min_session_length: 2

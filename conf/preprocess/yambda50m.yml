@@ -1,0 +1,24 @@
+# Yambda-50M listens, session-aware, global temporal split backward from the last timestamp with 30-minute gaps
+# (research plan section 3): T0 train (~287 days) | T1a model selection (3 days, valid_test) |
+# T1b calibration / Sinkhorn duals (4 days, calib) | T2 held-out test (last 7 days, test).
+# Raw data: data/yambda/raw/listens.parquet from https://huggingface.co/datasets/yandex/yambda (flat/50m/).
+type: single
+mode: session_aware
+preprocessor: yambda
+data:
+  folder: data/yambda/raw/
+  prefix: listens
+filter:
+  min_played_ratio: null     # 50 = Yambda's "listen+"; null keeps every listen (plan: ~160k listens / day)
+  session_gap: 1800          # 30 minutes
+params:
+  test_days: 7
+  calib_days: 4
+  valid_days: 3
+  gap: 1800
+  min_item_support: 20       # plays in T0 -> ~170k items
+  min_session_length: 5
+  max_session_length: 200    # 0.3% of the sessions, 5% of the listens (continuous streaming)
+  min_user_sessions: 3
+output:
+  folder: data/yambda/temporal/
